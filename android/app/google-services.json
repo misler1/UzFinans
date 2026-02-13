@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "862239999217",
+    "project_id": "uzfinans-bab17",
+    "storage_bucket": "uzfinans-bab17.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862239999217:android:add30b7fd80be91975d550",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtvF39PBseIfgdLYmo5Lk_bo8WVl6-iDE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
