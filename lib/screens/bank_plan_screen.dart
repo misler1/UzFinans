@@ -12,13 +12,27 @@ class BankPlanScreen extends StatefulWidget {
 
 class _BankPlanScreenState extends State<BankPlanScreen> {
   final BankDebtService _service = BankDebtService();
+  static const String _rulePrefix = "__rule__";
 
-  String _monthKey(DateTime d) => "${d.year}-${d.month.toString().padLeft(2, '0')}";
+  String _monthKey(DateTime d) =>
+      "${d.year}-${d.month.toString().padLeft(2, '0')}";
+  String _ruleKey(String monthKey) => "$_rulePrefix$monthKey";
+  bool _isRuleKey(String key) => key.startsWith(_rulePrefix);
 
   String _monthLabel(DateTime d) {
     const months = [
-      "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
-      "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+      "Ocak",
+      "Şubat",
+      "Mart",
+      "Nisan",
+      "Mayıs",
+      "Haziran",
+      "Temmuz",
+      "Ağustos",
+      "Eylül",
+      "Ekim",
+      "Kasım",
+      "Aralık"
     ];
     return "${months[d.month - 1]} ${d.year}";
   }
@@ -65,9 +79,53 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
     return currentDebt * monthlyRate;
   }
 
+  double _defaultPayment(BankDebt bank, double currentDebt) {
+    if (bank.minPaymentType == "percentage") {
+      return (currentDebt * bank.minPaymentAmount) / 100.0;
+    }
+    return bank.minPaymentAmount;
+  }
+
+  List<_PaymentRule> _rules(BankDebt bank) {
+    final items = <_PaymentRule>[];
+    bank.customPayments.forEach((key, value) {
+      if (!_isRuleKey(key)) return;
+      final monthKey = key.replaceFirst(_rulePrefix, "");
+      final raw = value.trim();
+      if (raw.isEmpty || !raw.contains(":")) return;
+      final parts = raw.split(":");
+      if (parts.length != 2) return;
+      final type = parts.first;
+      final parsed = double.tryParse(parts.last.replaceAll(',', '.'));
+      if (parsed == null || parsed <= 0) return;
+      if (type != "amount" && type != "percentage") return;
+      items.add(_PaymentRule(monthKey: monthKey, type: type, value: parsed));
+    });
+    items.sort((a, b) => a.monthKey.compareTo(b.monthKey));
+    return items;
+  }
+
+  _PaymentRule? _activeRuleForMonth(List<_PaymentRule> rules, String monthKey) {
+    _PaymentRule? active;
+    for (final r in rules) {
+      if (r.monthKey.compareTo(monthKey) <= 0) {
+        active = r;
+      }
+    }
+    return active;
+  }
+
+  double _paymentFromRule(_PaymentRule rule, double currentDebt) {
+    if (rule.type == "percentage") {
+      return (currentDebt * rule.value) / 100.0;
+    }
+    return rule.value;
+  }
+
   List<_ProjectionRow> _buildProjection(BankDebt bank) {
     final results = <_ProjectionRow>[];
     double currentDebt = bank.totalDebt;
+    final rules = _rules(bank);
 
     int monthOffset = 0;
     bool warning = false;
@@ -83,18 +141,20 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
         interestType: bank.interestType,
       );
 
-      // Default payment
-      double payment = bank.minPaymentAmount;
-      if (bank.minPaymentType == "percentage") {
-        payment = (currentDebt * bank.minPaymentAmount) / 100.0;
+      double payment = _defaultPayment(bank, currentDebt);
+      final rule = _activeRuleForMonth(rules, key);
+      if (rule != null) {
+        payment = _paymentFromRule(rule, currentDebt);
       }
 
-      // Custom override (Map<String, String>)
+      // Bu aya özel manuel tutar varsa her şeyi override eder.
       final String? customStr = bank.customPayments[key];
-      final bool isCustom = customStr != null && customStr.trim().isNotEmpty;
-      if (isCustom) {
+      final bool hasMonthCustom =
+          customStr != null && customStr.trim().isNotEmpty;
+      if (hasMonthCustom) {
         payment = double.tryParse(customStr!.replaceAll(',', '.')) ?? payment;
       }
+      final bool isCustom = hasMonthCustom || rule != null;
 
       // Replit warning: payment <= interest ve 24. ayda kes
       if (payment <= interest && currentDebt > 0) {
@@ -105,8 +165,9 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
       }
 
       // ödeme borç + faizden fazla olamaz
-      final double actualPayment =
-          payment > (currentDebt + interest) ? (currentDebt + interest) : payment;
+      final double actualPayment = payment > (currentDebt + interest)
+          ? (currentDebt + interest)
+          : payment;
 
       // kalan borç
       final double remainingDouble =
@@ -139,6 +200,7 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
   bool _hasWarning(BankDebt bank) {
     double currentDebt = bank.totalDebt;
     int monthOffset = 0;
+    final rules = _rules(bank);
 
     while (currentDebt > 0.01 && monthOffset < 60) {
       final date = _addMonths(DateTime.now(), monthOffset);
@@ -151,11 +213,11 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
         interestType: bank.interestType,
       );
 
-      double payment = bank.minPaymentAmount;
-      if (bank.minPaymentType == "percentage") {
-        payment = (currentDebt * bank.minPaymentAmount) / 100;
+      double payment = _defaultPayment(bank, currentDebt);
+      final rule = _activeRuleForMonth(rules, key);
+      if (rule != null) {
+        payment = _paymentFromRule(rule, currentDebt);
       }
-
       final custom = bank.customPayments[key];
       if (custom != null && custom.trim().isNotEmpty) {
         payment = double.tryParse(custom.replaceAll(',', '.')) ?? payment;
@@ -165,8 +227,9 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
         if (monthOffset >= 23) return true;
       }
 
-      final actualPayment =
-          payment > (currentDebt + interest) ? (currentDebt + interest) : payment;
+      final actualPayment = payment > (currentDebt + interest)
+          ? (currentDebt + interest)
+          : payment;
 
       currentDebt =
           (currentDebt + interest - actualPayment).clamp(0.0, double.infinity);
@@ -177,31 +240,115 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
     return false;
   }
 
-  Future<void> _editCustomPayment(BankDebt bank, String monthKey, double currentPayment) async {
-    final ctrl = TextEditingController(text: currentPayment.toStringAsFixed(2));
+  Future<void> _editPaymentPlan(
+      BankDebt bank, String monthKey, double currentPayment) async {
+    final ruleRaw = bank.customPayments[_ruleKey(monthKey)];
+    String mode = "single_amount";
+    if (ruleRaw != null && ruleRaw.startsWith("amount:")) {
+      mode = "forward_amount";
+    } else if (ruleRaw != null && ruleRaw.startsWith("percentage:")) {
+      mode = "forward_percentage";
+    }
 
-    final ok = await showDialog<bool>(
+    String initialText = bank.customPayments[monthKey]?.trim() ??
+        currentPayment.toStringAsFixed(2);
+    if (ruleRaw != null && ruleRaw.contains(":")) {
+      initialText = ruleRaw.split(":").last.trim();
+    }
+    final ctrl = TextEditingController(text: initialText);
+
+    final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Ödeme Tutarını Düzenle"),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: "Tutar"),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: const Text("Ödeme Planını Düzenle"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: mode,
+                decoration: const InputDecoration(labelText: "Uygulama Şekli"),
+                items: const [
+                  DropdownMenuItem(
+                    value: "single_amount",
+                    child: Text("Sadece Bu Ay (Tutar)"),
+                  ),
+                  DropdownMenuItem(
+                    value: "forward_amount",
+                    child: Text("Bu Aydan Sonrası (Sabit Tutar)"),
+                  ),
+                  DropdownMenuItem(
+                    value: "forward_percentage",
+                    child: Text("Bu Aydan Sonrası (Yüzde)"),
+                  ),
+                ],
+                onChanged: (v) => setD(() => mode = v ?? "single_amount"),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: ctrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText:
+                      mode == "forward_percentage" ? "Yüzde (%)" : "Tutar",
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("İptal"),
+            ),
+            if (bank.customPayments.containsKey(monthKey) ||
+                bank.customPayments.containsKey(_ruleKey(monthKey)))
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, "clear"),
+                child: const Text("Bu Ay Kuralını Temizle"),
+              ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, mode),
+              child: const Text("Kaydet"),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("İptal")),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Kaydet")),
-        ],
       ),
     );
 
-    if (ok == true) {
-      bank.customPayments[monthKey] = ctrl.text.trim();
+    if (result == null) return;
+
+    if (result == "clear") {
+      bank.customPayments.remove(monthKey);
+      bank.customPayments.remove(_ruleKey(monthKey));
       await _service.update(bank);
       setState(() {});
-      _toast("Ödeme planı güncellendi");
+      _toast("Bu ay için özel plan temizlendi.");
+      return;
     }
+
+    final parsed = double.tryParse(ctrl.text.trim().replaceAll(',', '.'));
+    if (parsed == null || parsed <= 0) {
+      _toast("Geçerli bir değer gir.");
+      return;
+    }
+
+    if (result == "single_amount") {
+      bank.customPayments[monthKey] = parsed.toStringAsFixed(2);
+      bank.customPayments.remove(_ruleKey(monthKey));
+    } else if (result == "forward_amount") {
+      bank.customPayments[_ruleKey(monthKey)] =
+          "amount:${parsed.toStringAsFixed(2)}";
+      bank.customPayments.remove(monthKey);
+    } else if (result == "forward_percentage") {
+      bank.customPayments[_ruleKey(monthKey)] =
+          "percentage:${parsed.toStringAsFixed(2)}";
+      bank.customPayments.remove(monthKey);
+    }
+
+    await _service.update(bank);
+    setState(() {});
+    _toast("Ödeme planı güncellendi");
   }
 
   Future<void> _markPaid(BankDebt bank, DateTime date, double amount) async {
@@ -257,13 +404,14 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                     Expanded(
                       child: Text(
                         "Dikkat: Ödeme miktarı faizi karşılamıyor! Plan 24. ayda kesildi.",
-                        style: TextStyle(color: Color(0xFFB45309), fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                            color: Color(0xFFB45309),
+                            fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
                 ),
               ),
-
             Row(
               children: [
                 _TopCard(
@@ -274,7 +422,8 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                 const SizedBox(width: 10),
                 _TopCard(
                   title: "Faiz Oranı",
-                  value: "%${bank.interestRate} (${bank.interestType == "Daily" ? "Günlük" : "Aylık"})",
+                  value:
+                      "%${bank.interestRate} (${bank.interestType == "Daily" ? "Günlük" : "Aylık"})",
                   tint: const Color(0xFF64748B),
                 ),
                 const SizedBox(width: 10),
@@ -285,9 +434,7 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 14),
-
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -303,7 +450,8 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.03),
                         border: Border(
-                          bottom: BorderSide(color: Colors.black.withOpacity(0.08)),
+                          bottom:
+                              BorderSide(color: Colors.black.withOpacity(0.08)),
                         ),
                       ),
                       child: const Row(
@@ -314,11 +462,11 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                               style: TextStyle(fontWeight: FontWeight.w900)),
                           Spacer(),
                           Text("Düzenlemek için kaleme tıkla",
-                              style: TextStyle(fontSize: 11, color: Colors.black54)),
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.black54)),
                         ],
                       ),
                     ),
-
                     Expanded(
                       child: ListView.separated(
                         itemCount: projection.length,
@@ -332,20 +480,24 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                           final isPaid = bank.paidMonths.contains(row.monthKey);
 
                           return Container(
-                            color: isPaid ? Colors.green.withOpacity(0.04) : null,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            color:
+                                isPaid ? Colors.green.withOpacity(0.04) : null,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
                             child: Row(
                               children: [
                                 SizedBox(
                                   width: 62,
                                   child: Text("${i + 1}. Ay",
-                                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w800)),
                                 ),
                                 Expanded(
                                   flex: 2,
                                   child: Text(
                                     _monthLabel(row.date),
-                                    style: const TextStyle(color: Colors.black54),
+                                    style:
+                                        const TextStyle(color: Colors.black54),
                                   ),
                                 ),
                                 Expanded(
@@ -361,7 +513,9 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                                   child: Align(
                                     alignment: Alignment.centerRight,
                                     child: Text(_fmtMoney(row.interest),
-                                        style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.black54)),
                                   ),
                                 ),
                                 Expanded(
@@ -371,9 +525,11 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                                     child: InkWell(
                                       onTap: isPaid
                                           ? null
-                                          : () => _editCustomPayment(bank, row.monthKey, row.payment),
+                                          : () => _editPaymentPlan(
+                                              bank, row.monthKey, row.payment),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
                                         children: [
                                           Text(
                                             _fmtMoney(row.payment),
@@ -386,7 +542,10 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                                           ),
                                           if (!isPaid) ...[
                                             const SizedBox(width: 6),
-                                            Icon(Icons.edit, size: 16, color: Colors.black.withOpacity(0.45)),
+                                            Icon(Icons.edit,
+                                                size: 16,
+                                                color: Colors.black
+                                                    .withOpacity(0.45)),
                                           ],
                                         ],
                                       ),
@@ -398,7 +557,8 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                                   child: Align(
                                     alignment: Alignment.centerRight,
                                     child: Text(_fmtMoney(row.remainingDebt),
-                                        style: const TextStyle(fontWeight: FontWeight.w900)),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w900)),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -406,22 +566,29 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                                   width: 100,
                                   child: isPaid
                                       ? const Row(
-                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.end,
                                           children: [
-                                            Icon(Icons.check_circle, color: Colors.green, size: 18),
+                                            Icon(Icons.check_circle,
+                                                color: Colors.green, size: 18),
                                             SizedBox(width: 6),
                                             Text("Ödendi",
                                                 style: TextStyle(
-                                                    color: Colors.green, fontWeight: FontWeight.w800)),
+                                                    color: Colors.green,
+                                                    fontWeight:
+                                                        FontWeight.w800)),
                                           ],
                                         )
                                       : ElevatedButton(
-                                          onPressed: () => _markPaid(bank, row.date, row.payment),
+                                          onPressed: () => _markPaid(
+                                              bank, row.date, row.payment),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.white,
                                             foregroundColor: Colors.green,
                                             elevation: 0,
-                                            side: BorderSide(color: Colors.green.withOpacity(0.35)),
+                                            side: BorderSide(
+                                                color: Colors.green
+                                                    .withOpacity(0.35)),
                                           ),
                                           child: const Text("Ödeme Yap"),
                                         ),
@@ -467,6 +634,18 @@ class _ProjectionRow {
   });
 }
 
+class _PaymentRule {
+  final String monthKey;
+  final String type; // amount | percentage
+  final double value;
+
+  const _PaymentRule({
+    required this.monthKey,
+    required this.type,
+    required this.value,
+  });
+}
+
 class _TopCard extends StatelessWidget {
   final String title;
   final String value;
@@ -500,7 +679,9 @@ class _TopCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+            Text(value,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
           ],
         ),
       ),
