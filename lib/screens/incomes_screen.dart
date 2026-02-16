@@ -11,6 +11,7 @@ class IncomesScreen extends StatefulWidget {
 
 class _IncomesScreenState extends State<IncomesScreen> {
   final IncomeService _service = IncomeService();
+  final Set<String> _deletingIncomeIds = <String>{};
 
   late int selectedMonth;
   late int selectedYear;
@@ -110,6 +111,12 @@ class _IncomesScreenState extends State<IncomesScreen> {
       if (left > 1 && left % 3 == 1) buf.write('.');
     }
     return "₺$buf";
+  }
+
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+    );
   }
 
   // --- yardımcı: tekrarlı satırlar üret ---
@@ -242,6 +249,7 @@ class _IncomesScreenState extends State<IncomesScreen> {
     }
 
     rebuildPreview();
+    bool isSaving = false;
 
     await showDialog(
       context: context,
@@ -591,111 +599,137 @@ class _IncomesScreenState extends State<IncomesScreen> {
                             const Spacer(),
                             ElevatedButton.icon(
                               onPressed: () async {
+                                if (isSaving) return;
+                                setDialogState(() => isSaving = true);
+
                                 final name = nameCtrl.text.trim();
                                 final type = typeCtrl.text.trim();
                                 final defaultAmount = double.tryParse(
                                         amountCtrl.text.replaceAll(',', '.')) ??
                                     0;
 
-                                if (name.isEmpty || defaultAmount <= 0) return;
+                                if (name.isEmpty || defaultAmount <= 0) {
+                                  if (dialogCtx.mounted) {
+                                    setDialogState(() => isSaving = false);
+                                  }
+                                  return;
+                                }
 
-                                // ✅ SERİ DÜZENLEME: Plan satırlarını seriye uygula
-                                if (isSeriesEdit && seriesItems.isNotEmpty) {
-                                  for (int i = 0; i < seriesItems.length; i++) {
-                                    final newAmount = double.tryParse(
-                                            previewAmountCtrls[i]
-                                                .text
-                                                .replaceAll(',', '.')) ??
-                                        seriesItems[i].amount;
+                                try {
+                                  // ✅ SERİ DÜZENLEME: Plan satırlarını seriye uygula
+                                  if (isSeriesEdit && seriesItems.isNotEmpty) {
+                                    for (int i = 0;
+                                        i < seriesItems.length;
+                                        i++) {
+                                      final newAmount = double.tryParse(
+                                              previewAmountCtrls[i]
+                                                  .text
+                                                  .replaceAll(',', '.')) ??
+                                          seriesItems[i].amount;
 
-                                    seriesItems[i].name = name;
-                                    seriesItems[i].type =
-                                        type.isEmpty ? "-" : type;
-                                    seriesItems[i].amount = newAmount;
-                                    seriesItems[i].date = previewDates[i];
-                                    seriesItems[i].recurring = true;
-                                    seriesItems[i].frequency = frequency;
-                                    seriesItems[i].endDate = endDate;
+                                      seriesItems[i].name = name;
+                                      seriesItems[i].type =
+                                          type.isEmpty ? "-" : type;
+                                      seriesItems[i].amount = newAmount;
+                                      seriesItems[i].date = previewDates[i];
+                                      seriesItems[i].recurring = true;
+                                      seriesItems[i].frequency = frequency;
+                                      seriesItems[i].endDate = endDate;
+                                    }
+
+                                    await _service.updateMany(seriesItems);
+
+                                    if (mounted) Navigator.pop(dialogCtx);
+                                    setState(() {});
+                                    return;
                                   }
 
-                                  await _service.updateMany(seriesItems);
+                                  // ✅ TEK KAYIT DÜZENLEME (serisiz)
+                                  if (edit != null) {
+                                    edit.name = name;
+                                    edit.type = type.isEmpty ? "-" : type;
+                                    edit.amount = defaultAmount;
+                                    edit.date = selectedDate;
+                                    edit.recurring = recurring;
+                                    edit.frequency = frequency;
+                                    edit.endDate = endDate;
+                                    await _service.update(edit);
 
-                                  if (mounted) Navigator.pop(dialogCtx);
-                                  setState(() {});
-                                  return;
-                                }
+                                    if (mounted) Navigator.pop(dialogCtx);
+                                    setState(() {});
+                                    return;
+                                  }
 
-                                // ✅ TEK KAYIT DÜZENLEME (serisiz)
-                                if (edit != null) {
-                                  edit.name = name;
-                                  edit.type = type.isEmpty ? "-" : type;
-                                  edit.amount = defaultAmount;
-                                  edit.date = selectedDate;
-                                  edit.recurring = recurring;
-                                  edit.frequency = frequency;
-                                  edit.endDate = endDate;
-                                  await _service.update(edit);
+                                  // ✅ YENİ KAYIT EKLEME
+                                  if (recurring &&
+                                      endDate != null &&
+                                      previewDates.isNotEmpty) {
+                                    final seriesId = DateTime.now()
+                                        .millisecondsSinceEpoch
+                                        .toString();
 
-                                  if (mounted) Navigator.pop(dialogCtx);
-                                  setState(() {});
-                                  return;
-                                }
+                                    for (int i = 0;
+                                        i < previewDates.length;
+                                        i++) {
+                                      final a = double.tryParse(
+                                              previewAmountCtrls[i]
+                                                  .text
+                                                  .replaceAll(',', '.')) ??
+                                          defaultAmount;
 
-                                // ✅ YENİ KAYIT EKLEME
-                                if (recurring &&
-                                    endDate != null &&
-                                    previewDates.isNotEmpty) {
-                                  final seriesId = DateTime.now()
-                                      .millisecondsSinceEpoch
-                                      .toString();
-
-                                  for (int i = 0;
-                                      i < previewDates.length;
-                                      i++) {
-                                    final a = double.tryParse(
-                                            previewAmountCtrls[i]
-                                                .text
-                                                .replaceAll(',', '.')) ??
-                                        defaultAmount;
-
+                                      final income = Income(
+                                        id: "${DateTime.now().millisecondsSinceEpoch}-$i",
+                                        name: name,
+                                        type: type.isEmpty ? "-" : type,
+                                        amount: a,
+                                        date: previewDates[i],
+                                        isReceived: false,
+                                        recurring: true,
+                                        frequency: frequency,
+                                        endDate: endDate,
+                                        seriesId: seriesId,
+                                        occurrenceIndex: i,
+                                      );
+                                      await _service.add(income);
+                                    }
+                                  } else {
                                     final income = Income(
-                                      id: "${DateTime.now().millisecondsSinceEpoch}-$i",
+                                      id: DateTime.now()
+                                          .millisecondsSinceEpoch
+                                          .toString(),
                                       name: name,
                                       type: type.isEmpty ? "-" : type,
-                                      amount: a,
-                                      date: previewDates[i],
+                                      amount: defaultAmount,
+                                      date: selectedDate,
                                       isReceived: false,
-                                      recurring: true,
+                                      recurring: false,
                                       frequency: frequency,
                                       endDate: endDate,
-                                      seriesId: seriesId,
-                                      occurrenceIndex: i,
+                                      seriesId: null,
+                                      occurrenceIndex: null,
                                     );
                                     await _service.add(income);
                                   }
-                                } else {
-                                  final income = Income(
-                                    id: DateTime.now()
-                                        .millisecondsSinceEpoch
-                                        .toString(),
-                                    name: name,
-                                    type: type.isEmpty ? "-" : type,
-                                    amount: defaultAmount,
-                                    date: selectedDate,
-                                    isReceived: false,
-                                    recurring: false,
-                                    frequency: frequency,
-                                    endDate: endDate,
-                                    seriesId: null,
-                                    occurrenceIndex: null,
-                                  );
-                                  await _service.add(income);
-                                }
 
-                                if (mounted) Navigator.pop(dialogCtx);
-                                setState(() {});
+                                  if (mounted) Navigator.pop(dialogCtx);
+                                  setState(() {});
+                                } catch (_) {
+                                  _toast("Kaydetme sırasında hata oluştu.");
+                                } finally {
+                                  if (dialogCtx.mounted) {
+                                    setDialogState(() => isSaving = false);
+                                  }
+                                }
                               },
-                              icon: const Icon(Icons.save),
+                              icon: isSaving
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.save),
                               label: Text(edit == null ? "Kaydet" : "Güncelle"),
                             ),
                           ],
@@ -713,6 +747,8 @@ class _IncomesScreenState extends State<IncomesScreen> {
   }
 
   Future<void> _confirmDelete(Income income) async {
+    if (_deletingIncomeIds.contains(income.id)) return;
+
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -732,8 +768,18 @@ class _IncomesScreenState extends State<IncomesScreen> {
     );
 
     if (ok == true) {
-      await _service.delete(income);
-      setState(() {});
+      setState(() => _deletingIncomeIds.add(income.id));
+      try {
+        await _service.delete(income);
+      } catch (_) {
+        _toast("Silme sırasında hata oluştu.");
+      } finally {
+        if (mounted) {
+          setState(() {
+            _deletingIncomeIds.remove(income.id);
+          });
+        }
+      }
     }
   }
 
@@ -906,7 +952,9 @@ class _IncomesScreenState extends State<IncomesScreen> {
                 ),
                 IconButton(
                   tooltip: "Sil",
-                  onPressed: () => _confirmDelete(income),
+                  onPressed: _deletingIncomeIds.contains(income.id)
+                      ? null
+                      : () => _confirmDelete(income),
                   icon:
                       Icon(Icons.delete, size: 18, color: Colors.grey.shade600),
                 ),
@@ -950,7 +998,9 @@ class _IncomesScreenState extends State<IncomesScreen> {
           ),
           IconButton(
             tooltip: "Sil",
-            onPressed: () => _confirmDelete(income),
+            onPressed: _deletingIncomeIds.contains(income.id)
+                ? null
+                : () => _confirmDelete(income),
             icon: Icon(Icons.delete, size: 18, color: Colors.grey.shade600),
           ),
         ],
