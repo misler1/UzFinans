@@ -243,11 +243,14 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
   Future<void> _editPaymentPlan(
       BankDebt bank, String monthKey, double currentPayment) async {
     final ruleRaw = bank.customPayments[_ruleKey(monthKey)];
-    String mode = "single_amount";
+    bool applyForward = false;
+    String forwardType = "amount";
     if (ruleRaw != null && ruleRaw.startsWith("amount:")) {
-      mode = "forward_amount";
+      applyForward = true;
+      forwardType = "amount";
     } else if (ruleRaw != null && ruleRaw.startsWith("percentage:")) {
-      mode = "forward_percentage";
+      applyForward = true;
+      forwardType = "percentage";
     }
 
     String initialText = bank.customPayments[monthKey]?.trim() ??
@@ -262,39 +265,52 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
           title: const Text("Ödeme Planını Düzenle"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: mode,
-                decoration: const InputDecoration(labelText: "Uygulama Şekli"),
-                items: const [
-                  DropdownMenuItem(
-                    value: "single_amount",
-                    child: Text("Sadece Bu Ay (Tutar)"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: ctrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: (applyForward && forwardType == "percentage")
+                        ? "Yüzde (%)"
+                        : "Tutar",
+                    border: const OutlineInputBorder(),
                   ),
-                  DropdownMenuItem(
-                    value: "forward_amount",
-                    child: Text("Bu Aydan Sonrası (Sabit Tutar)"),
-                  ),
-                  DropdownMenuItem(
-                    value: "forward_percentage",
-                    child: Text("Bu Aydan Sonrası (Yüzde)"),
+                ),
+                const SizedBox(height: 12),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: applyForward,
+                  title:
+                      const Text("Bu aydan itibaren sonraki aylara da uygula"),
+                  subtitle: const Text(
+                      "İşaretlersen bu ay ve sonrası otomatik güncellenir."),
+                  onChanged: (v) => setD(() => applyForward = v ?? false),
+                ),
+                if (applyForward) ...[
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment<String>(
+                        value: "amount",
+                        label: Text("Sabit Tutar"),
+                      ),
+                      ButtonSegment<String>(
+                        value: "percentage",
+                        label: Text("Yüzde"),
+                      ),
+                    ],
+                    selected: {forwardType},
+                    onSelectionChanged: (v) {
+                      setD(() => forwardType = v.first);
+                    },
                   ),
                 ],
-                onChanged: (v) => setD(() => mode = v ?? "single_amount"),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: ctrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText:
-                      mode == "forward_percentage" ? "Yüzde (%)" : "Tutar",
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -308,7 +324,7 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                 child: const Text("Bu Ay Kuralını Temizle"),
               ),
             ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, mode),
+              onPressed: () => Navigator.pop(ctx, "save"),
               child: const Text("Kaydet"),
             ),
           ],
@@ -333,14 +349,14 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
       return;
     }
 
-    if (result == "single_amount") {
+    if (!applyForward) {
       bank.customPayments[monthKey] = parsed.toStringAsFixed(2);
       bank.customPayments.remove(_ruleKey(monthKey));
-    } else if (result == "forward_amount") {
+    } else if (forwardType == "amount") {
       bank.customPayments[_ruleKey(monthKey)] =
           "amount:${parsed.toStringAsFixed(2)}";
       bank.customPayments.remove(monthKey);
-    } else if (result == "forward_percentage") {
+    } else {
       bank.customPayments[_ruleKey(monthKey)] =
           "percentage:${parsed.toStringAsFixed(2)}";
       bank.customPayments.remove(monthKey);
@@ -365,6 +381,94 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
     setState(() {});
   }
 
+  Widget _mobileProjectionItem(
+      BankDebt bank, _ProjectionRow row, bool isPaid, int index) {
+    return Container(
+      color: isPaid ? Colors.green.withOpacity(0.04) : null,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text("${index + 1}. Ay",
+                  style: const TextStyle(fontWeight: FontWeight.w900)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _monthLabel(row.date),
+                  style: const TextStyle(color: Colors.black54),
+                ),
+              ),
+              if (isPaid)
+                const Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 16),
+                    SizedBox(width: 4),
+                    Text("Ödendi",
+                        style: TextStyle(
+                            color: Colors.green, fontWeight: FontWeight.w800)),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              Text("Borç: ${_fmtMoney(row.startingDebt)}",
+                  style: const TextStyle(fontSize: 12)),
+              Text("Faiz: ${_fmtMoney(row.interest)}",
+                  style: const TextStyle(fontSize: 12, color: Colors.black54)),
+              Text("Kalan: ${_fmtMoney(row.remainingDebt)}",
+                  style: const TextStyle(fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _fmtMoney(row.payment),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                    color: row.isCustom
+                        ? const Color(0xFF4F46E5)
+                        : const Color(0xFFE11D48),
+                  ),
+                ),
+              ),
+              if (!isPaid)
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      _editPaymentPlan(bank, row.monthKey, row.payment),
+                  icon: const Icon(Icons.edit, size: 16),
+                  label: const Text("Düzenle"),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (!isPaid)
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: () => _markPaid(bank, row.date, row.payment),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.green,
+                  elevation: 0,
+                  side: BorderSide(color: Colors.green.withOpacity(0.35)),
+                ),
+                child: const Text("Ödeme Yap"),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bank = _service.getById(widget.bankId);
@@ -377,12 +481,11 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
 
     final projection = _buildProjection(bank);
     final hasWarning = _hasWarning(bank);
+    final isCompact = MediaQuery.sizeOf(context).shortestSide < 600;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        title: Text("${bank.name} - Ödeme Planı"),
-      ),
+      appBar: AppBar(title: Text("${bank.name} - Ödeme Planı")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -412,28 +515,58 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                   ],
                 ),
               ),
-            Row(
-              children: [
-                _TopCard(
-                  title: "Güncel Toplam Borç",
-                  value: _fmtMoney(bank.totalDebt),
-                  tint: const Color(0xFF4F46E5),
-                ),
-                const SizedBox(width: 10),
-                _TopCard(
-                  title: "Faiz Oranı",
-                  value:
-                      "%${bank.interestRate} (${bank.interestType == "Daily" ? "Günlük" : "Aylık"})",
-                  tint: const Color(0xFF64748B),
-                ),
-                const SizedBox(width: 10),
-                _TopCard(
-                  title: "Planlanan Vade",
-                  value: "${projection.length} Ay",
-                  tint: const Color(0xFFE11D48),
-                ),
-              ],
-            ),
+            if (isCompact)
+              Column(
+                children: [
+                  _TopCard(
+                    title: "Güncel Toplam Borç",
+                    value: _fmtMoney(bank.totalDebt),
+                    tint: const Color(0xFF4F46E5),
+                  ),
+                  const SizedBox(height: 10),
+                  _TopCard(
+                    title: "Faiz Oranı",
+                    value:
+                        "%${bank.interestRate} (${bank.interestType == "Daily" ? "Günlük" : "Aylık"})",
+                    tint: const Color(0xFF64748B),
+                  ),
+                  const SizedBox(height: 10),
+                  _TopCard(
+                    title: "Planlanan Vade",
+                    value: "${projection.length} Ay",
+                    tint: const Color(0xFFE11D48),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: _TopCard(
+                      title: "Güncel Toplam Borç",
+                      value: _fmtMoney(bank.totalDebt),
+                      tint: const Color(0xFF4F46E5),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _TopCard(
+                      title: "Faiz Oranı",
+                      value:
+                          "%${bank.interestRate} (${bank.interestType == "Daily" ? "Günlük" : "Aylık"})",
+                      tint: const Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _TopCard(
+                      title: "Planlanan Vade",
+                      value: "${projection.length} Ay",
+                      tint: const Color(0xFFE11D48),
+                    ),
+                  ),
+                ],
+              ),
             const SizedBox(height: 14),
             Expanded(
               child: Container(
@@ -454,18 +587,40 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                               BorderSide(color: Colors.black.withOpacity(0.08)),
                         ),
                       ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.calendar_month, color: Color(0xFF4F46E5)),
-                          SizedBox(width: 8),
-                          Text("Dinamik Ödeme Takvimi",
-                              style: TextStyle(fontWeight: FontWeight.w900)),
-                          Spacer(),
-                          Text("Düzenlemek için kaleme tıkla",
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.black54)),
-                        ],
-                      ),
+                      child: isCompact
+                          ? const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.calendar_month,
+                                        color: Color(0xFF4F46E5)),
+                                    SizedBox(width: 8),
+                                    Text("Dinamik Ödeme Takvimi",
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w900)),
+                                  ],
+                                ),
+                                SizedBox(height: 6),
+                                Text("Düzenlemek için Düzenle butonuna bas",
+                                    style: TextStyle(
+                                        fontSize: 11, color: Colors.black54)),
+                              ],
+                            )
+                          : const Row(
+                              children: [
+                                Icon(Icons.calendar_month,
+                                    color: Color(0xFF4F46E5)),
+                                SizedBox(width: 8),
+                                Text("Dinamik Ödeme Takvimi",
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w900)),
+                                Spacer(),
+                                Text("Düzenlemek için kaleme tıkla",
+                                    style: TextStyle(
+                                        fontSize: 11, color: Colors.black54)),
+                              ],
+                            ),
                     ),
                     Expanded(
                       child: ListView.separated(
@@ -478,6 +633,10 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                         itemBuilder: (_, i) {
                           final row = projection[i];
                           final isPaid = bank.paidMonths.contains(row.monthKey);
+
+                          if (isCompact) {
+                            return _mobileProjectionItem(bank, row, isPaid, i);
+                          }
 
                           return Container(
                             color:
@@ -659,31 +818,35 @@ class _TopCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: tint.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: tint.withOpacity(0.12)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: Colors.black.withOpacity(0.60),
-              ),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 124),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: tint.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: tint.withOpacity(0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: Colors.black.withOpacity(0.60),
             ),
-            const SizedBox(height: 8),
-            Text(value,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+        ],
       ),
     );
   }

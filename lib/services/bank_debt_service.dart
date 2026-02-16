@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 import '../models/bank_debt.dart';
@@ -13,17 +15,35 @@ class BankDebtService {
 
   Future<void> add(BankDebt d) async {
     await _box.put(d.id, d);
-    await _collection.doc(d.id).set(_toMap(d));
+    unawaited(
+      _collection
+          .doc(d.id)
+          .set(_toMap(d))
+          .timeout(const Duration(seconds: 8))
+          .catchError((_) {}),
+    );
   }
 
   Future<void> update(BankDebt d) async {
     await _box.put(d.id, d);
-    await _collection.doc(d.id).set(_toMap(d));
+    unawaited(
+      _collection
+          .doc(d.id)
+          .set(_toMap(d))
+          .timeout(const Duration(seconds: 8))
+          .catchError((_) {}),
+    );
   }
 
   Future<void> delete(BankDebt d) async {
     await _box.delete(d.id);
-    await _collection.doc(d.id).delete();
+    unawaited(
+      _collection
+          .doc(d.id)
+          .delete()
+          .timeout(const Duration(seconds: 8))
+          .catchError((_) {}),
+    );
   }
 
   // Bu ayki toplam asgari ödeme

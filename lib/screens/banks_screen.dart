@@ -121,6 +121,7 @@ class _BanksScreenState extends State<BanksScreen> {
     final dueDayCtrl = TextEditingController(
         text: edit != null ? edit.paymentDueDay.toString() : "5");
     bool isActive = edit?.isActive ?? true;
+    bool isSaving = false;
 
     await showDialog(
       context: context,
@@ -271,6 +272,8 @@ class _BanksScreenState extends State<BanksScreen> {
                           const Spacer(),
                           ElevatedButton(
                             onPressed: () async {
+                              if (isSaving) return;
+                              setD(() => isSaving = true);
                               final name = nameCtrl.text.trim();
                               final total = double.tryParse(
                                       totalCtrl.text.replaceAll(',', '.')) ??
@@ -285,43 +288,63 @@ class _BanksScreenState extends State<BanksScreen> {
 
                               if (name.isEmpty || total <= 0 || min <= 0) {
                                 _toast("Zorunlu alanları doldur.");
+                                if (ctx.mounted) {
+                                  setD(() => isSaving = false);
+                                }
                                 return;
                               }
 
-                              if (edit == null) {
-                                final d = BankDebt(
-                                  id: DateTime.now()
-                                      .millisecondsSinceEpoch
-                                      .toString(),
-                                  name: name,
-                                  debtType: debtType,
-                                  totalDebt: total,
-                                  interestRate: rate,
-                                  interestType: interestType,
-                                  minPaymentType: minType,
-                                  minPaymentAmount: min,
-                                  paymentDueDay: due.clamp(1, 31),
-                                  isActive: isActive,
-                                );
-                                await _service.add(d);
-                              } else {
-                                edit.name = name;
-                                edit.debtType = debtType;
-                                edit.totalDebt = total;
-                                edit.interestRate = rate;
-                                edit.interestType = interestType;
-                                edit.minPaymentType = minType;
-                                edit.minPaymentAmount = min;
-                                edit.paymentDueDay = due.clamp(1, 31);
-                                edit.isActive = isActive;
-                                await _service.update(edit);
-                              }
+                              try {
+                                if (edit == null) {
+                                  final d = BankDebt(
+                                    id: DateTime.now()
+                                        .millisecondsSinceEpoch
+                                        .toString(),
+                                    name: name,
+                                    debtType: debtType,
+                                    totalDebt: total,
+                                    interestRate: rate,
+                                    interestType: interestType,
+                                    minPaymentType: minType,
+                                    minPaymentAmount: min,
+                                    paymentDueDay: due.clamp(1, 31),
+                                    isActive: isActive,
+                                  );
+                                  await _service.add(d);
+                                } else {
+                                  edit.name = name;
+                                  edit.debtType = debtType;
+                                  edit.totalDebt = total;
+                                  edit.interestRate = rate;
+                                  edit.interestType = interestType;
+                                  edit.minPaymentType = minType;
+                                  edit.minPaymentAmount = min;
+                                  edit.paymentDueDay = due.clamp(1, 31);
+                                  edit.isActive = isActive;
+                                  await _service.update(edit);
+                                }
 
-                              if (mounted) Navigator.pop(ctx);
-                              setState(() {});
+                                if (mounted) Navigator.pop(ctx);
+                                setState(() {});
+                              } catch (_) {
+                                _toast("Kaydetme sırasında hata oluştu.");
+                              } finally {
+                                if (ctx.mounted) {
+                                  setD(() => isSaving = false);
+                                }
+                              }
                             },
-                            child: Text(
-                                edit == null ? "Bankayı Kaydet" : "Güncelle"),
+                            child: isSaving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(edit == null
+                                    ? "Bankayı Kaydet"
+                                    : "Güncelle"),
                           ),
                         ],
                       )
@@ -667,137 +690,129 @@ class _BanksScreenState extends State<BanksScreen> {
                                 child: Column(
                                   children: [
                                     // ✅ ÜST BLOK (bilgiler)
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  b.name,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.w900),
-                                                ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                b.name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight:
+                                                        FontWeight.w900),
                                               ),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 6),
-                                                decoration: BoxDecoration(
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: b.isActive
+                                                    ? Colors.green
+                                                        .withOpacity(0.10)
+                                                    : Colors.grey
+                                                        .withOpacity(0.12),
+                                                borderRadius:
+                                                    BorderRadius.circular(999),
+                                              ),
+                                              child: Text(
+                                                b.isActive ? "Aktif" : "Pasif",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
                                                   color: b.isActive
                                                       ? Colors.green
-                                                          .withOpacity(0.10)
-                                                      : Colors.grey
-                                                          .withOpacity(0.12),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          999),
-                                                ),
-                                                child: Text(
-                                                  b.isActive
-                                                      ? "Aktif"
-                                                      : "Pasif",
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w700,
-                                                    color: b.isActive
-                                                        ? Colors.green
-                                                        : Colors.grey,
-                                                  ),
+                                                      : Colors.grey,
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            b.debtType,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                                color: Colors.black54),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Text("Toplam Borç",
-                                              style: TextStyle(
-                                                  color: Colors.black
-                                                      .withOpacity(0.55),
-                                                  fontSize: 11)),
-                                          Text(
-                                            _fmtMoney(b.totalDebt),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.w900),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    const Text("Faiz Oranı",
-                                                        style: TextStyle(
-                                                            color:
-                                                                Colors.black54,
-                                                            fontSize: 11)),
-                                                    Text(
-                                                      "%${b.interestRate} (${b.interestType})",
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.w700),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    const Text("Asgari Ödeme",
-                                                        style: TextStyle(
-                                                            color:
-                                                                Colors.black54,
-                                                            fontSize: 11)),
-                                                    Text(
-                                                      b.minPaymentType ==
-                                                              "percentage"
-                                                          ? "%${b.minPaymentAmount}"
-                                                          : _fmtMoney(b
-                                                              .minPaymentAmount),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: const TextStyle(
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          b.debtType,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              color: Colors.black54),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text("Toplam Borç",
+                                            style: TextStyle(
+                                                color: Colors.black
+                                                    .withOpacity(0.55),
+                                                fontSize: 11)),
+                                        Text(
+                                          _fmtMoney(b.totalDebt),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w900),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text("Faiz Oranı",
+                                                      style: TextStyle(
+                                                          color: Colors.black54,
+                                                          fontSize: 11)),
+                                                  Text(
+                                                    "%${b.interestRate} (${b.interestType})",
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
                                                         fontWeight:
-                                                            FontWeight.w900,
-                                                        color:
-                                                            Color(0xFFE11D48),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
+                                                            FontWeight.w700),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
+                                            ),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text("Asgari Ödeme",
+                                                      style: TextStyle(
+                                                          color: Colors.black54,
+                                                          fontSize: 11)),
+                                                  Text(
+                                                    b.minPaymentType ==
+                                                            "percentage"
+                                                        ? "%${b.minPaymentAmount}"
+                                                        : _fmtMoney(
+                                                            b.minPaymentAmount),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: Color(0xFFE11D48),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
 
                                     // ✅ ALT BLOK (çizgi + butonlar)
+                                    const SizedBox(height: 8),
                                     Divider(
                                       height: 18,
                                       thickness: 1,
@@ -807,6 +822,7 @@ class _BanksScreenState extends State<BanksScreen> {
                                     Wrap(
                                       spacing: 10,
                                       runSpacing: 8,
+                                      alignment: WrapAlignment.center,
                                       crossAxisAlignment:
                                           WrapCrossAlignment.center,
                                       children: [
