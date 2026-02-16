@@ -143,29 +143,35 @@ class _IncomesScreenState extends State<IncomesScreen> {
       // ✅ OTOMATİK AY SEÇİMİNDE: geçmiş ayları gizle (seçili ayın başından önceki satırları gösterme)
       if (_autoMonthSelected) {
         final startOfSelected = DateTime(selectedYear, selectedMonth, 1);
-        seriesItems = seriesItems.where((x) => !x.date.isBefore(startOfSelected)).toList();
+        seriesItems = seriesItems
+            .where((x) => !x.date.isBefore(startOfSelected))
+            .toList();
         seriesItems.sort((a, b) =>
             (a.occurrenceIndex ?? 0).compareTo(b.occurrenceIndex ?? 0));
       }
     }
 
     final nameCtrl = TextEditingController(
-        text: edit?.name ?? (seriesItems.isNotEmpty ? seriesItems.first.name : ""));
+        text: edit?.name ??
+            (seriesItems.isNotEmpty ? seriesItems.first.name : ""));
     final typeCtrl = TextEditingController(
-        text: edit?.type ?? (seriesItems.isNotEmpty ? seriesItems.first.type : ""));
+        text: edit?.type ??
+            (seriesItems.isNotEmpty ? seriesItems.first.type : ""));
     final amountCtrl = TextEditingController(
         text: edit != null
             ? edit.amount.toString()
-            : (seriesItems.isNotEmpty ? seriesItems.first.amount.toString() : ""));
+            : (seriesItems.isNotEmpty
+                ? seriesItems.first.amount.toString()
+                : ""));
 
     DateTime selectedDate = edit?.date ??
         (seriesItems.isNotEmpty ? seriesItems.first.date : DateTime.now());
-    bool recurring =
-        edit?.recurring ?? (seriesItems.isNotEmpty ? seriesItems.first.recurring : false);
-    String frequency =
-        edit?.frequency ?? (seriesItems.isNotEmpty ? seriesItems.first.frequency : "monthly");
-    DateTime? endDate =
-        edit?.endDate ?? (seriesItems.isNotEmpty ? seriesItems.first.endDate : null);
+    bool recurring = edit?.recurring ??
+        (seriesItems.isNotEmpty ? seriesItems.first.recurring : false);
+    String frequency = edit?.frequency ??
+        (seriesItems.isNotEmpty ? seriesItems.first.frequency : "monthly");
+    DateTime? endDate = edit?.endDate ??
+        (seriesItems.isNotEmpty ? seriesItems.first.endDate : null);
 
     // Tekrarlı önizleme satırları (tarih + tutar)
     List<DateTime> previewDates = [];
@@ -267,7 +273,7 @@ class _IncomesScreenState extends State<IncomesScreen> {
                 firstDate: DateTime(2020),
                 lastDate: DateTime(2100),
               );
-              if (picked !=null) {
+              if (picked != null) {
                 setDialogState(() {
                   endDate = picked;
                   dateOverrides.clear();
@@ -306,11 +312,13 @@ class _IncomesScreenState extends State<IncomesScreen> {
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.black.withOpacity(0.08)),
+                    borderSide:
+                        BorderSide(color: Colors.black.withOpacity(0.08)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.black.withOpacity(0.10)),
+                    borderSide:
+                        BorderSide(color: Colors.black.withOpacity(0.10)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -334,7 +342,8 @@ class _IncomesScreenState extends State<IncomesScreen> {
                 onTap: onTap,
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: Colors.black.withOpacity(0.10)),
@@ -381,7 +390,6 @@ class _IncomesScreenState extends State<IncomesScreen> {
                           ),
                         ),
                         const SizedBox(height: 14),
-
                         roundedField(controller: nameCtrl, label: "Gelir İsmi"),
                         const SizedBox(height: 10),
                         roundedField(controller: typeCtrl, label: "Tür"),
@@ -389,17 +397,15 @@ class _IncomesScreenState extends State<IncomesScreen> {
                         roundedField(
                           controller: amountCtrl,
                           label: "Varsayılan Tutar",
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
                         ),
                         const SizedBox(height: 10),
-
                         chipLikeButton(
                           onTap: pickDate,
                           icon: Icons.calendar_month,
                           text: "Başlangıç: ${_fmtDate(selectedDate)}",
                         ),
-
                         const SizedBox(height: 10),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
@@ -414,7 +420,6 @@ class _IncomesScreenState extends State<IncomesScreen> {
                             });
                           },
                         ),
-
                         if (recurring) ...[
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
@@ -473,7 +478,6 @@ class _IncomesScreenState extends State<IncomesScreen> {
                               ],
                             ],
                           ),
-
                           if (endDate != null && previewDates.isNotEmpty) ...[
                             const SizedBox(height: 14),
                             Text(
@@ -513,8 +517,10 @@ class _IncomesScreenState extends State<IncomesScreen> {
                                             borderRadius:
                                                 BorderRadius.circular(12),
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 12, vertical: 10),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 10),
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
                                                 borderRadius:
@@ -527,12 +533,13 @@ class _IncomesScreenState extends State<IncomesScreen> {
                                               child: Row(
                                                 children: [
                                                   const Icon(
-                                                      Icons.calendar_month_outlined,
+                                                      Icons
+                                                          .calendar_month_outlined,
                                                       size: 18),
                                                   const SizedBox(width: 8),
                                                   Expanded(
-                                                    child: Text(
-                                                        _fmtDate(previewDates[i])),
+                                                    child: Text(_fmtDate(
+                                                        previewDates[i])),
                                                   ),
                                                 ],
                                               ),
@@ -547,9 +554,9 @@ class _IncomesScreenState extends State<IncomesScreen> {
                                             onChanged: (v) {
                                               amountOverrides[i] = v;
                                             },
-                                            keyboardType:
-                                                const TextInputType.numberWithOptions(
-                                                    decimal: true),
+                                            keyboardType: const TextInputType
+                                                .numberWithOptions(
+                                                decimal: true),
                                             decoration: InputDecoration(
                                               labelText: "Tutar",
                                               isDense: true,
@@ -574,7 +581,6 @@ class _IncomesScreenState extends State<IncomesScreen> {
                             ),
                           ],
                         ],
-
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -603,7 +609,8 @@ class _IncomesScreenState extends State<IncomesScreen> {
                                         seriesItems[i].amount;
 
                                     seriesItems[i].name = name;
-                                    seriesItems[i].type = type.isEmpty ? "-" : type;
+                                    seriesItems[i].type =
+                                        type.isEmpty ? "-" : type;
                                     seriesItems[i].amount = newAmount;
                                     seriesItems[i].date = previewDates[i];
                                     seriesItems[i].recurring = true;
@@ -642,7 +649,9 @@ class _IncomesScreenState extends State<IncomesScreen> {
                                       .millisecondsSinceEpoch
                                       .toString();
 
-                                  for (int i = 0; i < previewDates.length; i++) {
+                                  for (int i = 0;
+                                      i < previewDates.length;
+                                      i++) {
                                     final a = double.tryParse(
                                             previewAmountCtrls[i]
                                                 .text
@@ -666,7 +675,9 @@ class _IncomesScreenState extends State<IncomesScreen> {
                                   }
                                 } else {
                                   final income = Income(
-                                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                                    id: DateTime.now()
+                                        .millisecondsSinceEpoch
+                                        .toString(),
                                     name: name,
                                     type: type.isEmpty ? "-" : type,
                                     amount: defaultAmount,
@@ -733,50 +744,48 @@ class _IncomesScreenState extends State<IncomesScreen> {
     required IconData icon,
     required Color tint,
   }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: tint.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: tint.withOpacity(0.12)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: tint.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: tint),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: tint.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: tint.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: tint.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(14),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black.withOpacity(0.70))),
-                  const SizedBox(height: 6),
-                  Text(value,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.black.withOpacity(0.55),
-                      )),
-                ],
-              ),
+            child: Icon(icon, color: tint),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black.withOpacity(0.70))),
+                const SizedBox(height: 6),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 2),
+                Text(subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.black.withOpacity(0.55),
+                    )),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -824,9 +833,12 @@ class _IncomesScreenState extends State<IncomesScreen> {
       ),
       child: const Row(
         children: [
-          SizedBox(width: 52, child: Text("Durum", style: TextStyle(fontSize: 12))),
-          Expanded(flex: 3, child: Text("Kaynak", style: TextStyle(fontSize: 12))),
-          Expanded(flex: 2, child: Text("Tarih", style: TextStyle(fontSize: 12))),
+          SizedBox(
+              width: 52, child: Text("Durum", style: TextStyle(fontSize: 12))),
+          Expanded(
+              flex: 3, child: Text("Kaynak", style: TextStyle(fontSize: 12))),
+          Expanded(
+              flex: 2, child: Text("Tarih", style: TextStyle(fontSize: 12))),
           Expanded(
             flex: 2,
             child: Align(
@@ -895,10 +907,51 @@ class _IncomesScreenState extends State<IncomesScreen> {
                 IconButton(
                   tooltip: "Sil",
                   onPressed: () => _confirmDelete(income),
-                  icon: Icon(Icons.delete, size: 18, color: Colors.grey.shade600),
+                  icon:
+                      Icon(Icons.delete, size: 18, color: Colors.grey.shade600),
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mobileRowItem(Income income) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      leading: Checkbox(
+        value: income.isReceived,
+        onChanged: (v) async {
+          income.isReceived = v ?? false;
+          await _service.update(income);
+          setState(() {});
+        },
+      ),
+      title: Text(
+        income.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(_fmtDate(income.date)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _fmtMoney(income.amount),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+          IconButton(
+            tooltip: "Düzenle",
+            onPressed: () => _openAddEditDialog(edit: income),
+            icon: const Icon(Icons.edit, size: 18),
+          ),
+          IconButton(
+            tooltip: "Sil",
+            onPressed: () => _confirmDelete(income),
+            icon: Icon(Icons.delete, size: 18, color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -912,144 +965,244 @@ class _IncomesScreenState extends State<IncomesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 900;
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Column(
+                  if (isCompact)
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           "Gelirler",
                           style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                          ),
+                              fontSize: 26, fontWeight: FontWeight.w900),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           "Aylık gelir özeti",
-                          style: TextStyle(
-                            color: Colors.black.withOpacity(0.55),
+                          style:
+                              TextStyle(color: Colors.black.withOpacity(0.55)),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _smallFilter<int>(
+                              label: "Ay",
+                              value: selectedMonth,
+                              items: months
+                                  .map((m) => DropdownMenuItem<int>(
+                                        value: m["value"] as int,
+                                        child: Text(m["label"] as String),
+                                      ))
+                                  .toList(),
+                              onChanged: (v) => setState(() {
+                                selectedMonth = v ?? selectedMonth;
+                                _autoMonthSelected = false;
+                              }),
+                            ),
+                            _smallFilter<int>(
+                              label: "Yıl",
+                              value: selectedYear,
+                              items: _years()
+                                  .map((y) => DropdownMenuItem<int>(
+                                        value: y,
+                                        child: Text("$y"),
+                                      ))
+                                  .toList(),
+                              onChanged: (v) => setState(() {
+                                selectedYear = v ?? selectedYear;
+                                _autoMonthSelected = false;
+                              }),
+                            ),
+                            SizedBox(
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _openAddEditDialog(),
+                                icon: const Icon(Icons.add),
+                                label: const Text("Gelir Ekle"),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Gelirler",
+                                style: TextStyle(
+                                    fontSize: 26, fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Aylık gelir özeti",
+                                style: TextStyle(
+                                  color: Colors.black.withOpacity(0.55),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _smallFilter<int>(
+                          label: "Ay",
+                          value: selectedMonth,
+                          items: months
+                              .map((m) => DropdownMenuItem<int>(
+                                    value: m["value"] as int,
+                                    child: Text(m["label"] as String),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setState(() {
+                            selectedMonth = v ?? selectedMonth;
+                            _autoMonthSelected = false;
+                          }),
+                        ),
+                        const SizedBox(width: 10),
+                        _smallFilter<int>(
+                          label: "Yıl",
+                          value: selectedYear,
+                          items: _years()
+                              .map((y) => DropdownMenuItem<int>(
+                                  value: y, child: Text("$y")))
+                              .toList(),
+                          onChanged: (v) => setState(() {
+                            selectedYear = v ?? selectedYear;
+                            _autoMonthSelected = false;
+                          }),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          height: 44,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _openAddEditDialog(),
+                            icon: const Icon(Icons.add),
+                            label: const Text("Gelir Ekle"),
+                          ),
+                        )
+                      ],
+                    ),
+                  const SizedBox(height: 16),
+                  if (isCompact)
+                    Column(
+                      children: [
+                        _statCard(
+                          title: "Beklenen Gelir",
+                          value: _fmtMoney(_totalExpected),
+                          subtitle: "Seçili dönem",
+                          icon: Icons.trending_up,
+                          tint: const Color(0xFF16A34A),
+                        ),
+                        const SizedBox(height: 10),
+                        _statCard(
+                          title: "Kasa",
+                          value: _fmtMoney(_cashBalance),
+                          subtitle: "Alınan (şimdilik)",
+                          icon: Icons.account_balance_wallet_outlined,
+                          tint: const Color(0xFF2563EB),
+                        ),
+                        const SizedBox(height: 10),
+                        _statCard(
+                          title: "Durum",
+                          value: "%$_progressPercent",
+                          subtitle: "Gelirlerin kasaya gelme",
+                          icon: Icons.calendar_month,
+                          tint: const Color(0xFF4F46E5),
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _statCard(
+                            title: "Beklenen Gelir",
+                            value: _fmtMoney(_totalExpected),
+                            subtitle: "Seçili dönem",
+                            icon: Icons.trending_up,
+                            tint: const Color(0xFF16A34A),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _statCard(
+                            title: "Kasa",
+                            value: _fmtMoney(_cashBalance),
+                            subtitle: "Alınan (şimdilik)",
+                            icon: Icons.account_balance_wallet_outlined,
+                            tint: const Color(0xFF2563EB),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _statCard(
+                            title: "Durum",
+                            value: "%$_progressPercent",
+                            subtitle: "Gelirlerin kasaya gelme",
+                            icon: Icons.calendar_month,
+                            tint: const Color(0xFF4F46E5),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  _smallFilter<int>(
-                    label: "Ay",
-                    value: selectedMonth,
-                    items: months
-                        .map((m) => DropdownMenuItem<int>(
-                              value: m["value"] as int,
-                              child: Text(m["label"] as String),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() {
-                      selectedMonth = v ?? selectedMonth;
-                      _autoMonthSelected = false; // ✅ manuel seçim
-                    }),
-                  ),
-                  const SizedBox(width: 10),
-                  _smallFilter<int>(
-                    label: "Yıl",
-                    value: selectedYear,
-                    items: _years()
-                        .map((y) =>
-                            DropdownMenuItem<int>(value: y, child: Text("$y")))
-                        .toList(),
-                    onChanged: (v) => setState(() {
-                      selectedYear = v ?? selectedYear;
-                      _autoMonthSelected = false; // ✅ manuel seçim
-                    }),
-                  ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    height: 44,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _openAddEditDialog(),
-                      icon: const Icon(Icons.add),
-                      label: const Text("Gelir Ekle"),
-                    ),
-                  )
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  _statCard(
-                    title: "Beklenen Gelir",
-                    value: _fmtMoney(_totalExpected),
-                    subtitle: "Seçili dönem",
-                    icon: Icons.trending_up,
-                    tint: const Color(0xFF16A34A),
-                  ),
-                  const SizedBox(width: 10),
-                  _statCard(
-                    title: "Kasa",
-                    value: _fmtMoney(_cashBalance),
-                    subtitle: "Alınan (şimdilik)",
-                    icon: Icons.account_balance_wallet_outlined,
-                    tint: const Color(0xFF2563EB),
-                  ),
-                  const SizedBox(width: 10),
-                  _statCard(
-                    title: "Durum",
-                    value: "%$_progressPercent",
-                    subtitle: "Gelirlerin kasaya gelme",
-                    icon: Icons.calendar_month,
-                    tint: const Color(0xFF4F46E5),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.black.withOpacity(0.06)),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                                color: Colors.black.withOpacity(0.08)),
-                          ),
-                        ),
-                        child: Text(
-                          "Gelir Kayıtları – ${_monthLabel(selectedMonth)} $selectedYear",
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border:
+                            Border.all(color: Colors.black.withOpacity(0.06)),
                       ),
-                      _tableHeader(),
-                      Expanded(
-                        child: filtered.isEmpty
-                            ? const Center(child: Text("Bu dönemde gelir yok"))
-                            : ListView.builder(
-                                itemCount: filtered.length,
-                                itemBuilder: (_, i) => _rowItem(filtered[i]),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                    color: Colors.black.withOpacity(0.08)),
                               ),
+                            ),
+                            child: Text(
+                              "Gelir Kayıtları – ${_monthLabel(selectedMonth)} $selectedYear",
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          if (!isCompact) _tableHeader(),
+                          Expanded(
+                            child: filtered.isEmpty
+                                ? const Center(
+                                    child: Text("Bu dönemde gelir yok"))
+                                : ListView.builder(
+                                    itemCount: filtered.length,
+                                    itemBuilder: (_, i) => isCompact
+                                        ? _mobileRowItem(filtered[i])
+                                        : _rowItem(filtered[i]),
+                                  ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

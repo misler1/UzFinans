@@ -143,8 +143,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       // ✅ OTOMATİK AY SEÇİMİNDE: geçmiş ayları gizle
       if (_autoMonthSelected) {
         final startOfSelected = DateTime(selectedYear, selectedMonth, 1);
-        seriesItems =
-            seriesItems.where((x) => !x.date.isBefore(startOfSelected)).toList();
+        seriesItems = seriesItems
+            .where((x) => !x.date.isBefore(startOfSelected))
+            .toList();
 
         seriesItems.sort((a, b) =>
             (a.occurrenceIndex ?? 0).compareTo(b.occurrenceIndex ?? 0));
@@ -152,10 +153,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     }
 
     final nameCtrl = TextEditingController(
-      text: edit?.name ?? (seriesItems.isNotEmpty ? seriesItems.first.name : ""),
+      text:
+          edit?.name ?? (seriesItems.isNotEmpty ? seriesItems.first.name : ""),
     );
     final typeCtrl = TextEditingController(
-      text: edit?.type ?? (seriesItems.isNotEmpty ? seriesItems.first.type : ""),
+      text:
+          edit?.type ?? (seriesItems.isNotEmpty ? seriesItems.first.type : ""),
     );
 
     final amountCtrl = TextEditingController(
@@ -164,14 +167,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           : (seriesItems.isNotEmpty ? seriesItems.first.amount.toString() : ""),
     );
 
-    DateTime selectedDate =
-        edit?.date ?? (seriesItems.isNotEmpty ? seriesItems.first.date : DateTime.now());
-    bool recurring =
-        edit?.recurring ?? (seriesItems.isNotEmpty ? seriesItems.first.recurring : false);
-    String frequency =
-        edit?.frequency ?? (seriesItems.isNotEmpty ? seriesItems.first.frequency : "monthly");
-    DateTime? endDate =
-        edit?.endDate ?? (seriesItems.isNotEmpty ? seriesItems.first.endDate : null);
+    DateTime selectedDate = edit?.date ??
+        (seriesItems.isNotEmpty ? seriesItems.first.date : DateTime.now());
+    bool recurring = edit?.recurring ??
+        (seriesItems.isNotEmpty ? seriesItems.first.recurring : false);
+    String frequency = edit?.frequency ??
+        (seriesItems.isNotEmpty ? seriesItems.first.frequency : "monthly");
+    DateTime? endDate = edit?.endDate ??
+        (seriesItems.isNotEmpty ? seriesItems.first.endDate : null);
 
     // Tekrarlı önizleme satırları (tarih + tutar)
     List<DateTime> previewDates = [];
@@ -205,10 +208,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       }
 
       // ✅ Yeni seri eklerken: otomatik üret
-      previewDates = _generateDates(start: selectedDate, end: endDate!, frequency: frequency);
+      previewDates = _generateDates(
+          start: selectedDate, end: endDate!, frequency: frequency);
       disposePreviewCtrls();
-      previewAmountCtrls =
-          previewDates.map((_) => TextEditingController(text: amountCtrl.text)).toList();
+      previewAmountCtrls = previewDates
+          .map((_) => TextEditingController(text: amountCtrl.text))
+          .toList();
     }
 
     // amount değişince (sync açıkken) tüm satırlara uygula
@@ -287,11 +292,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.black.withOpacity(0.08)),
+                    borderSide:
+                        BorderSide(color: Colors.black.withOpacity(0.08)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.black.withOpacity(0.10)),
+                    borderSide:
+                        BorderSide(color: Colors.black.withOpacity(0.10)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -315,7 +322,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 onTap: onTap,
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: Colors.black.withOpacity(0.10)),
@@ -394,7 +402,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
               // ✅ YENİ KAYIT
               if (recurring && endDate != null && previewDates.isNotEmpty) {
-                final seriesId = DateTime.now().millisecondsSinceEpoch.toString();
+                final seriesId =
+                    DateTime.now().millisecondsSinceEpoch.toString();
 
                 for (int i = 0; i < previewDates.length; i++) {
                   final a = double.tryParse(
@@ -466,7 +475,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           ),
                         ),
                         const SizedBox(height: 14),
-
                         roundedField(controller: nameCtrl, label: "Gider İsmi"),
                         const SizedBox(height: 10),
                         roundedField(controller: typeCtrl, label: "Tür"),
@@ -474,17 +482,15 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         roundedField(
                           controller: amountCtrl,
                           label: "Varsayılan Tutar",
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
                         ),
                         const SizedBox(height: 10),
-
                         chipLikeButton(
                           onTap: pickDate,
                           icon: Icons.calendar_month,
                           text: "Başlangıç: ${_fmtDate(selectedDate)}",
                         ),
-
                         const SizedBox(height: 10),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
@@ -497,7 +503,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             });
                           },
                         ),
-
                         if (recurring) ...[
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
@@ -526,7 +531,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             },
                           ),
                           const SizedBox(height: 10),
-
                           Row(
                             children: [
                               Expanded(
@@ -553,7 +557,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                               ],
                             ],
                           ),
-
                           if (endDate != null && previewDates.isNotEmpty) ...[
                             const SizedBox(height: 10),
                             Row(
@@ -577,7 +580,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                         setDialogState(() {
                                           syncAllAmounts = v;
                                           if (syncAllAmounts) {
-                                            for (final c in previewAmountCtrls) {
+                                            for (final c
+                                                in previewAmountCtrls) {
                                               c.text = amountCtrl.text;
                                             }
                                           }
@@ -654,10 +658,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                           flex: 2,
                                           child: TextField(
                                             controller: previewAmountCtrls[i],
-                                            keyboardType:
-                                                const TextInputType
-                                                    .numberWithOptions(
-                                                    decimal: true),
+                                            keyboardType: const TextInputType
+                                                .numberWithOptions(
+                                                decimal: true),
                                             decoration: InputDecoration(
                                               labelText: "Tutar",
                                               isDense: true,
@@ -682,7 +685,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             ),
                           ],
                         ],
-
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -694,8 +696,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             ElevatedButton.icon(
                               onPressed: onSave,
                               icon: const Icon(Icons.save),
-                              label:
-                                  Text(edit == null ? "Kaydet" : "Güncelle"),
+                              label: Text(edit == null ? "Kaydet" : "Güncelle"),
                             ),
                           ],
                         ),
@@ -752,50 +753,48 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     required IconData icon,
     required Color tint,
   }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: tint.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: tint.withOpacity(0.12)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: tint.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: tint),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: tint.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: tint.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: tint.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(14),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black.withOpacity(0.70))),
-                  const SizedBox(height: 6),
-                  Text(value,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.black.withOpacity(0.55),
-                      )),
-                ],
-              ),
+            child: Icon(icon, color: tint),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black.withOpacity(0.70))),
+                const SizedBox(height: 6),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 2),
+                Text(subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.black.withOpacity(0.55),
+                    )),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -843,9 +842,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       ),
       child: const Row(
         children: [
-          SizedBox(width: 52, child: Text("Durum", style: TextStyle(fontSize: 12))),
-          Expanded(flex: 3, child: Text("Gider", style: TextStyle(fontSize: 12))),
-          Expanded(flex: 2, child: Text("Tarih", style: TextStyle(fontSize: 12))),
+          SizedBox(
+              width: 52, child: Text("Durum", style: TextStyle(fontSize: 12))),
+          Expanded(
+              flex: 3, child: Text("Gider", style: TextStyle(fontSize: 12))),
+          Expanded(
+              flex: 2, child: Text("Tarih", style: TextStyle(fontSize: 12))),
           Expanded(
             flex: 2,
             child: Align(
@@ -914,10 +916,51 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 IconButton(
                   tooltip: "Sil",
                   onPressed: () => _confirmDelete(expense),
-                  icon: Icon(Icons.delete, size: 18, color: Colors.grey.shade600),
+                  icon:
+                      Icon(Icons.delete, size: 18, color: Colors.grey.shade600),
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mobileRowItem(Expense expense) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      leading: Checkbox(
+        value: expense.isPaid,
+        onChanged: (v) async {
+          expense.isPaid = v ?? false;
+          await _service.update(expense);
+          setState(() {});
+        },
+      ),
+      title: Text(
+        expense.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(_fmtDate(expense.date)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _fmtMoney(expense.amount),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+          IconButton(
+            tooltip: "Düzenle",
+            onPressed: () => _openAddEditDialog(edit: expense),
+            icon: const Icon(Icons.edit, size: 18),
+          ),
+          IconButton(
+            tooltip: "Sil",
+            onPressed: () => _confirmDelete(expense),
+            icon: Icon(Icons.delete, size: 18, color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -931,149 +974,244 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Başlık + filtre + buton
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 900;
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Column(
+                  if (isCompact)
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           "Giderler",
                           style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                          ),
+                              fontSize: 26, fontWeight: FontWeight.w900),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           "Aylık gider özeti",
-                          style: TextStyle(
-                            color: Colors.black.withOpacity(0.55),
+                          style:
+                              TextStyle(color: Colors.black.withOpacity(0.55)),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _smallFilter<int>(
+                              label: "Ay",
+                              value: selectedMonth,
+                              items: months
+                                  .map((m) => DropdownMenuItem<int>(
+                                        value: m["value"] as int,
+                                        child: Text(m["label"] as String),
+                                      ))
+                                  .toList(),
+                              onChanged: (v) => setState(() {
+                                selectedMonth = v ?? selectedMonth;
+                                _autoMonthSelected = false;
+                              }),
+                            ),
+                            _smallFilter<int>(
+                              label: "Yıl",
+                              value: selectedYear,
+                              items: _years()
+                                  .map((y) => DropdownMenuItem<int>(
+                                        value: y,
+                                        child: Text("$y"),
+                                      ))
+                                  .toList(),
+                              onChanged: (v) => setState(() {
+                                selectedYear = v ?? selectedYear;
+                                _autoMonthSelected = false;
+                              }),
+                            ),
+                            SizedBox(
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _openAddEditDialog(),
+                                icon: const Icon(Icons.add),
+                                label: const Text("Gider Ekle"),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Giderler",
+                                style: TextStyle(
+                                    fontSize: 26, fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Aylık gider özeti",
+                                style: TextStyle(
+                                  color: Colors.black.withOpacity(0.55),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _smallFilter<int>(
+                          label: "Ay",
+                          value: selectedMonth,
+                          items: months
+                              .map((m) => DropdownMenuItem<int>(
+                                    value: m["value"] as int,
+                                    child: Text(m["label"] as String),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setState(() {
+                            selectedMonth = v ?? selectedMonth;
+                            _autoMonthSelected = false;
+                          }),
+                        ),
+                        const SizedBox(width: 10),
+                        _smallFilter<int>(
+                          label: "Yıl",
+                          value: selectedYear,
+                          items: _years()
+                              .map((y) => DropdownMenuItem<int>(
+                                  value: y, child: Text("$y")))
+                              .toList(),
+                          onChanged: (v) => setState(() {
+                            selectedYear = v ?? selectedYear;
+                            _autoMonthSelected = false;
+                          }),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          height: 44,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _openAddEditDialog(),
+                            icon: const Icon(Icons.add),
+                            label: const Text("Gider Ekle"),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  _smallFilter<int>(
-                    label: "Ay",
-                    value: selectedMonth,
-                    items: months
-                        .map((m) => DropdownMenuItem<int>(
-                              value: m["value"] as int,
-                              child: Text(m["label"] as String),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() {
-                      selectedMonth = v ?? selectedMonth;
-                      _autoMonthSelected = false; // ✅ manuel
-                    }),
-                  ),
-                  const SizedBox(width: 10),
-                  _smallFilter<int>(
-                    label: "Yıl",
-                    value: selectedYear,
-                    items: _years()
-                        .map((y) => DropdownMenuItem<int>(
-                              value: y,
-                              child: Text("$y"),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() {
-                      selectedYear = v ?? selectedYear;
-                      _autoMonthSelected = false; // ✅ manuel
-                    }),
-                  ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    height: 44,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _openAddEditDialog(),
-                      icon: const Icon(Icons.add),
-                      label: const Text("Gider Ekle"),
+                  const SizedBox(height: 16),
+                  if (isCompact)
+                    Column(
+                      children: [
+                        _statCard(
+                          title: "Planlanan",
+                          value: _fmtMoney(_totalPlanned),
+                          subtitle: "Seçili dönem",
+                          icon: Icons.trending_down,
+                          tint: const Color(0xFFE11D48),
+                        ),
+                        const SizedBox(height: 10),
+                        _statCard(
+                          title: "Ödenen",
+                          value: _fmtMoney(_paidTotal),
+                          subtitle: "İşaretli ödemeler",
+                          icon: Icons.credit_card,
+                          tint: const Color(0xFF0F766E),
+                        ),
+                        const SizedBox(height: 10),
+                        _statCard(
+                          title: "Durum",
+                          value: "%$_progressPercent",
+                          subtitle: "Tutar bazlı ilerleme",
+                          icon: Icons.calendar_month,
+                          tint: const Color(0xFF4F46E5),
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _statCard(
+                            title: "Planlanan",
+                            value: _fmtMoney(_totalPlanned),
+                            subtitle: "Seçili dönem",
+                            icon: Icons.trending_down,
+                            tint: const Color(0xFFE11D48),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _statCard(
+                            title: "Ödenen",
+                            value: _fmtMoney(_paidTotal),
+                            subtitle: "İşaretli ödemeler",
+                            icon: Icons.credit_card,
+                            tint: const Color(0xFF0F766E),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _statCard(
+                            title: "Durum",
+                            value: "%$_progressPercent",
+                            subtitle: "Tutar bazlı ilerleme",
+                            icon: Icons.calendar_month,
+                            tint: const Color(0xFF4F46E5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border:
+                            Border.all(color: Colors.black.withOpacity(0.06)),
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                    color: Colors.black.withOpacity(0.08)),
+                              ),
+                            ),
+                            child: Text(
+                              "Gider Kayıtları – ${_monthLabel(selectedMonth)} $selectedYear",
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          if (!isCompact) _tableHeader(),
+                          Expanded(
+                            child: filtered.isEmpty
+                                ? const Center(
+                                    child: Text("Bu dönemde gider yok"))
+                                : ListView.builder(
+                                    itemCount: filtered.length,
+                                    itemBuilder: (_, i) => isCompact
+                                        ? _mobileRowItem(filtered[i])
+                                        : _rowItem(filtered[i]),
+                                  ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 16),
-
-              // Kartlar
-              Row(
-                children: [
-                  _statCard(
-                    title: "Planlanan",
-                    value: _fmtMoney(_totalPlanned),
-                    subtitle: "Seçili dönem",
-                    icon: Icons.trending_down,
-                    tint: const Color(0xFFE11D48),
-                  ),
-                  const SizedBox(width: 10),
-                  _statCard(
-                    title: "Ödenen",
-                    value: _fmtMoney(_paidTotal),
-                    subtitle: "İşaretli ödemeler",
-                    icon: Icons.credit_card,
-                    tint: const Color(0xFF0F766E),
-                  ),
-                  const SizedBox(width: 10),
-                  _statCard(
-                    title: "Durum",
-                    value: "%$_progressPercent",
-                    subtitle: "Tutar bazlı ilerleme",
-                    icon: Icons.calendar_month,
-                    tint: const Color(0xFF4F46E5),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Liste kartı
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.black.withOpacity(0.06)),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                                color: Colors.black.withOpacity(0.08)),
-                          ),
-                        ),
-                        child: Text(
-                          "Gider Kayıtları – ${_monthLabel(selectedMonth)} $selectedYear",
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      _tableHeader(),
-                      Expanded(
-                        child: filtered.isEmpty
-                            ? const Center(child: Text("Bu dönemde gider yok"))
-                            : ListView.builder(
-                                itemCount: filtered.length,
-                                itemBuilder: (_, i) => _rowItem(filtered[i]),
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

@@ -89,8 +89,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .toList();
   }
 
-  double get _incomeExpected =>
-      _periodIncomes.fold(0, (s, e) => s + e.amount);
+  double get _incomeExpected => _periodIncomes.fold(0, (s, e) => s + e.amount);
 
   double get _incomeReceived =>
       _periodIncomes.where((e) => e.isReceived).fold(0, (s, e) => s + e.amount);
@@ -105,8 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<BankDebt> get _banks => _bankService.getAll();
 
-  double get _totalDebt =>
-      _banks.fold(0, (s, b) => s + b.totalDebt);
+  double get _totalDebt => _banks.fold(0, (s, b) => s + b.totalDebt);
 
   double get _totalMinPaymentThisMonth =>
       _bankService.totalMinPaymentForCurrentMonth();
@@ -150,50 +148,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required IconData icon,
     required Color tint,
   }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: tint.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: tint.withOpacity(0.12)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: tint.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: tint),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: tint.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: tint.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: tint.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(14),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black.withOpacity(0.70))),
-                  const SizedBox(height: 6),
-                  Text(value,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.black.withOpacity(0.55),
-                      )),
-                ],
-              ),
+            child: Icon(icon, color: tint),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black.withOpacity(0.70))),
+                const SizedBox(height: 6),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 2),
+                Text(subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.black.withOpacity(0.55),
+                    )),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -203,151 +199,269 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Başlık + filtre
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Dashboard",
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Genel özet – ${_monthLabel(selectedMonth)} $selectedYear",
-                          style: TextStyle(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const isCompact = true;
+
+            Widget buildSummaryCard() {
+              return Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.black.withOpacity(0.06)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Hızlı Özet",
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                          "• Bu dönemde ${_periodIncomes.length} gelir kaydı var."),
+                      Text(
+                          "• Bu dönemde ${_periodExpenses.length} gider kaydı var."),
+                      const SizedBox(height: 10),
+                      Text("• Toplam banka sayısı: ${_banks.length}"),
+                      const SizedBox(height: 10),
+                      Text(
+                        "Not: Dönem hesabı ayın 6’sı kuralına göre yapılır.",
+                        style: TextStyle(
                             color: Colors.black.withOpacity(0.55),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _smallFilter<int>(
-                    label: "Ay",
-                    value: selectedMonth,
-                    items: months
-                        .map((m) => DropdownMenuItem<int>(
-                              value: m["value"] as int,
-                              child: Text(m["label"] as String),
-                            ))
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => selectedMonth = v ?? selectedMonth),
-                  ),
-                  const SizedBox(width: 10),
-                  _smallFilter<int>(
-                    label: "Yıl",
-                    value: selectedYear,
-                    items: _years()
-                        .map((y) =>
-                            DropdownMenuItem<int>(value: y, child: Text("$y")))
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => selectedYear = v ?? selectedYear),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Kartlar
-              Row(
-                children: [
-                  _card(
-                    title: "Gelir (Alınan / Beklenen)",
-                    value: "${_fmtMoney(_incomeReceived)} / ${_fmtMoney(_incomeExpected)}",
-                    subtitle: "Seçili dönem",
-                    icon: Icons.trending_up,
-                    tint: const Color(0xFF16A34A),
-                  ),
-                  const SizedBox(width: 10),
-                  _card(
-                    title: "Gider (Ödenen / Beklenen)",
-                    value: "${_fmtMoney(_expensePaid)} / ${_fmtMoney(_expenseExpected)}",
-                    subtitle: "Seçili dönem",
-                    icon: Icons.trending_down,
-                    tint: const Color(0xFFE11D48),
-                  ),
-                  const SizedBox(width: 10),
-                  _card(
-                    title: "Kalan Nakit",
-                    value: _fmtMoney(_cashNet),
-                    subtitle: "Alınan gelir - ödenen gider",
-                    icon: Icons.account_balance_wallet_outlined,
-                    tint: _cashNet >= 0 ? const Color(0xFF2563EB) : const Color(0xFFE11D48),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  _card(
-                    title: "Toplam Borç",
-                    value: _fmtMoney(_totalDebt),
-                    subtitle: "Tüm bankalar",
-                    icon: Icons.landscape_outlined,
-                    tint: const Color(0xFF4F46E5),
-                  ),
-                  const SizedBox(width: 10),
-                  _card(
-                    title: "Bu Ay Asgari Ödeme",
-                    value: _fmtMoney(_totalMinPaymentThisMonth),
-                    subtitle: "Ödeme planına göre",
-                    icon: Icons.payments_outlined,
-                    tint: const Color(0xFF64748B),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.black.withOpacity(0.06)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Hızlı Özet",
-                          style: TextStyle(fontWeight: FontWeight.w900),
-                        ),
-                        const SizedBox(height: 10),
-                        Text("• Bu dönemde ${_periodIncomes.length} gelir kaydı var."),
-                        Text("• Bu dönemde ${_periodExpenses.length} gider kaydı var."),
-                        const SizedBox(height: 10),
-                        Text("• Toplam banka sayısı: ${_banks.length}"),
-                        const SizedBox(height: 10),
-                        Text(
-                          "Not: Dönem hesabı ayın 6’sı kuralına göre yapılır.",
-                          style: TextStyle(color: Colors.black.withOpacity(0.55), fontSize: 12),
-                        ),
-                      ],
-                    ),
+                            fontSize: 12),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: isCompact
+                  ? SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Dashboard",
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Genel özet – ${_monthLabel(selectedMonth)} $selectedYear",
+                            style: TextStyle(
+                              color: Colors.black.withOpacity(0.55),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              _smallFilter<int>(
+                                label: "Ay",
+                                value: selectedMonth,
+                                items: months
+                                    .map((m) => DropdownMenuItem<int>(
+                                          value: m["value"] as int,
+                                          child: Text(m["label"] as String),
+                                        ))
+                                    .toList(),
+                                onChanged: (v) => setState(
+                                    () => selectedMonth = v ?? selectedMonth),
+                              ),
+                              _smallFilter<int>(
+                                label: "Yıl",
+                                value: selectedYear,
+                                items: _years()
+                                    .map((y) => DropdownMenuItem<int>(
+                                          value: y,
+                                          child: Text("$y"),
+                                        ))
+                                    .toList(),
+                                onChanged: (v) => setState(
+                                    () => selectedYear = v ?? selectedYear),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _card(
+                            title: "Gelir (Alınan / Beklenen)",
+                            value:
+                                "${_fmtMoney(_incomeReceived)} / ${_fmtMoney(_incomeExpected)}",
+                            subtitle: "Seçili dönem",
+                            icon: Icons.trending_up,
+                            tint: const Color(0xFF16A34A),
+                          ),
+                          const SizedBox(height: 10),
+                          _card(
+                            title: "Gider (Ödenen / Beklenen)",
+                            value:
+                                "${_fmtMoney(_expensePaid)} / ${_fmtMoney(_expenseExpected)}",
+                            subtitle: "Seçili dönem",
+                            icon: Icons.trending_down,
+                            tint: const Color(0xFFE11D48),
+                          ),
+                          const SizedBox(height: 10),
+                          _card(
+                            title: "Kalan Nakit",
+                            value: _fmtMoney(_cashNet),
+                            subtitle: "Alınan gelir - ödenen gider",
+                            icon: Icons.account_balance_wallet_outlined,
+                            tint: _cashNet >= 0
+                                ? const Color(0xFF2563EB)
+                                : const Color(0xFFE11D48),
+                          ),
+                          const SizedBox(height: 10),
+                          _card(
+                            title: "Toplam Borç",
+                            value: _fmtMoney(_totalDebt),
+                            subtitle: "Tüm bankalar",
+                            icon: Icons.landscape_outlined,
+                            tint: const Color(0xFF4F46E5),
+                          ),
+                          const SizedBox(height: 10),
+                          _card(
+                            title: "Bu Ay Asgari Ödeme",
+                            value: _fmtMoney(_totalMinPaymentThisMonth),
+                            subtitle: "Ödeme planına göre",
+                            icon: Icons.payments_outlined,
+                            tint: const Color(0xFF64748B),
+                          ),
+                          const SizedBox(height: 16),
+                          buildSummaryCard(),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "Dashboard",
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Genel özet – ${_monthLabel(selectedMonth)} $selectedYear",
+                                    style: TextStyle(
+                                      color: Colors.black.withOpacity(0.55),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            _smallFilter<int>(
+                              label: "Ay",
+                              value: selectedMonth,
+                              items: months
+                                  .map((m) => DropdownMenuItem<int>(
+                                        value: m["value"] as int,
+                                        child: Text(m["label"] as String),
+                                      ))
+                                  .toList(),
+                              onChanged: (v) => setState(
+                                  () => selectedMonth = v ?? selectedMonth),
+                            ),
+                            const SizedBox(width: 10),
+                            _smallFilter<int>(
+                              label: "Yıl",
+                              value: selectedYear,
+                              items: _years()
+                                  .map((y) => DropdownMenuItem<int>(
+                                      value: y, child: Text("$y")))
+                                  .toList(),
+                              onChanged: (v) => setState(
+                                  () => selectedYear = v ?? selectedYear),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _card(
+                                title: "Gelir (Alınan / Beklenen)",
+                                value:
+                                    "${_fmtMoney(_incomeReceived)} / ${_fmtMoney(_incomeExpected)}",
+                                subtitle: "Seçili dönem",
+                                icon: Icons.trending_up,
+                                tint: const Color(0xFF16A34A),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _card(
+                                title: "Gider (Ödenen / Beklenen)",
+                                value:
+                                    "${_fmtMoney(_expensePaid)} / ${_fmtMoney(_expenseExpected)}",
+                                subtitle: "Seçili dönem",
+                                icon: Icons.trending_down,
+                                tint: const Color(0xFFE11D48),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _card(
+                                title: "Kalan Nakit",
+                                value: _fmtMoney(_cashNet),
+                                subtitle: "Alınan gelir - ödenen gider",
+                                icon: Icons.account_balance_wallet_outlined,
+                                tint: _cashNet >= 0
+                                    ? const Color(0xFF2563EB)
+                                    : const Color(0xFFE11D48),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _card(
+                                title: "Toplam Borç",
+                                value: _fmtMoney(_totalDebt),
+                                subtitle: "Tüm bankalar",
+                                icon: Icons.landscape_outlined,
+                                tint: const Color(0xFF4F46E5),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _card(
+                                title: "Bu Ay Asgari Ödeme",
+                                value: _fmtMoney(_totalMinPaymentThisMonth),
+                                subtitle: "Ödeme planına göre",
+                                icon: Icons.payments_outlined,
+                                tint: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(child: buildSummaryCard()),
+                      ],
+                    ),
+            );
+          },
         ),
       ),
     );

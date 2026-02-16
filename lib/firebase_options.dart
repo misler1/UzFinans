@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -63,6 +54,34 @@ class DefaultFirebaseOptions {
     messagingSenderId: '862239999217',
     projectId: 'uzfinans-bab17',
     storageBucket: 'uzfinans-bab17.firebasestorage.app',
-    iosBundleId: 'com.example.flutterApplication1',
+    iosBundleId: 'com.musa.uzfinans',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyCk6HeMMBuT8tmDjT4PbaBJLs0vF2J28VE',
+    appId: '1:862239999217:web:1f6fdde67fe0a43175d550',
+    messagingSenderId: '862239999217',
+    projectId: 'uzfinans-bab17',
+    authDomain: 'uzfinans-bab17.firebaseapp.com',
+    storageBucket: 'uzfinans-bab17.firebasestorage.app',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyCTFbRCK0Kq6jF9B4Yik9FTW8M0dIj89F0',
+    appId: '1:862239999217:ios:76b92921a63c708b75d550',
+    messagingSenderId: '862239999217',
+    projectId: 'uzfinans-bab17',
+    storageBucket: 'uzfinans-bab17.firebasestorage.app',
+    iosBundleId: 'com.musa.uzfinans',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCk6HeMMBuT8tmDjT4PbaBJLs0vF2J28VE',
+    appId: '1:862239999217:web:34f22c151772b01975d550',
+    messagingSenderId: '862239999217',
+    projectId: 'uzfinans-bab17',
+    authDomain: 'uzfinans-bab17.firebaseapp.com',
+    storageBucket: 'uzfinans-bab17.firebasestorage.app',
+  );
+
 }
