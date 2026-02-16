@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 import '../models/income.dart';
@@ -9,16 +10,25 @@ class IncomeService {
   static const String collectionName = 'incomes';
 
   Box<Income> get _box => Hive.box<Income>(boxName);
-  CollectionReference<Map<String, dynamic>> get _collection =>
-      FirebaseFirestore.instance.collection(collectionName);
+  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+  CollectionReference<Map<String, dynamic>>? get _collection {
+    final uid = _uid;
+    if (uid == null) return null;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection(collectionName);
+  }
 
   List<Income> getAll() {
     return _box.values.toList();
   }
 
   Future<void> _syncToCloud(Income income) async {
+    final collection = _collection;
+    if (collection == null) return;
     try {
-      await _collection
+      await collection
           .doc(income.id)
           .set(_toMap(income))
           .timeout(const Duration(seconds: 8));
@@ -28,8 +38,10 @@ class IncomeService {
   }
 
   Future<void> _deleteFromCloud(String id) async {
+    final collection = _collection;
+    if (collection == null) return;
     try {
-      await _collection.doc(id).delete().timeout(const Duration(seconds: 8));
+      await collection.doc(id).delete().timeout(const Duration(seconds: 8));
     } catch (_) {
       // Local delete has already succeeded; cloud sync is best-effort.
     }
@@ -52,10 +64,16 @@ class IncomeService {
 
   Future<void> clearAll() async {
     await _box.clear();
-    final snap = await _collection.get();
+    final collection = _collection;
+    if (collection == null) return;
+    final snap = await collection.get();
     for (final doc in snap.docs) {
       await doc.reference.delete();
     }
+  }
+
+  Future<void> clearAllLocalOnly() async {
+    await _box.clear();
   }
 
   // ✅ YENİ: Aynı seriesId olan gelirleri getir (seri)
@@ -75,12 +93,14 @@ class IncomeService {
   }
 
   Future<void> syncFromCloud() async {
-    final snap = await _collection.get();
+    final collection = _collection;
+    if (collection == null) return;
+    final snap = await collection.get();
 
     // Cloud boşsa mevcut local datayı cloud'a taşı.
     if (snap.docs.isEmpty && _box.isNotEmpty) {
       for (final income in _box.values) {
-        await _collection.doc(income.id).set(_toMap(income));
+        await collection.doc(income.id).set(_toMap(income));
       }
       return;
     }
@@ -95,7 +115,7 @@ class IncomeService {
     // Sadece localde kalan yeni kayıtları cloud'a yaz.
     for (final income in _box.values) {
       if (!cloudIds.contains(income.id)) {
-        await _collection.doc(income.id).set(_toMap(income));
+        await collection.doc(income.id).set(_toMap(income));
       }
     }
   }

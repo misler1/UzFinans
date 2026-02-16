@@ -240,23 +240,23 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
     return false;
   }
 
-  Future<void> _editPaymentPlan(
-      BankDebt bank, String monthKey, double currentPayment) async {
+  Future<void> _editPaymentPlan(BankDebt bank, String monthKey,
+      double currentPayment, double currentStartingDebt) async {
     final ruleRaw = bank.customPayments[_ruleKey(monthKey)];
     bool applyForward = false;
-    String forwardType = "amount";
+    String valueType = "amount";
     if (ruleRaw != null && ruleRaw.startsWith("amount:")) {
       applyForward = true;
-      forwardType = "amount";
+      valueType = "amount";
     } else if (ruleRaw != null && ruleRaw.startsWith("percentage:")) {
       applyForward = true;
-      forwardType = "percentage";
+      valueType = "percentage";
     }
 
     String initialText = bank.customPayments[monthKey]?.trim() ??
-        currentPayment.toStringAsFixed(2);
+        currentPayment.toStringAsFixed(2).replaceAll('.', ',');
     if (ruleRaw != null && ruleRaw.contains(":")) {
-      initialText = ruleRaw.split(":").last.trim();
+      initialText = ruleRaw.split(":").last.trim().replaceAll('.', ',');
     }
     final ctrl = TextEditingController(text: initialText);
 
@@ -274,11 +274,23 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
-                    labelText: (applyForward && forwardType == "percentage")
-                        ? "Yüzde (%)"
-                        : "Tutar",
+                    labelText:
+                        valueType == "percentage" ? "Yüzde (%)" : "Tutar",
                     border: const OutlineInputBorder(),
                   ),
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment<String>(
+                        value: "amount", label: Text("Tutar")),
+                    ButtonSegment<String>(
+                      value: "percentage",
+                      label: Text("Yüzde"),
+                    ),
+                  ],
+                  selected: {valueType},
+                  onSelectionChanged: (v) => setD(() => valueType = v.first),
                 ),
                 const SizedBox(height: 12),
                 CheckboxListTile(
@@ -292,21 +304,11 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                 ),
                 if (applyForward) ...[
                   const SizedBox(height: 8),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment<String>(
-                        value: "amount",
-                        label: Text("Sabit Tutar"),
-                      ),
-                      ButtonSegment<String>(
-                        value: "percentage",
-                        label: Text("Yüzde"),
-                      ),
-                    ],
-                    selected: {forwardType},
-                    onSelectionChanged: (v) {
-                      setD(() => forwardType = v.first);
-                    },
+                  Text(
+                    valueType == "percentage"
+                        ? "Yüzde kuralı bu aydan itibaren sonraki aylara uygulanır."
+                        : "Sabit tutar kuralı bu aydan itibaren sonraki aylara uygulanır.",
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                 ],
               ],
@@ -350,9 +352,14 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
     }
 
     if (!applyForward) {
-      bank.customPayments[monthKey] = parsed.toStringAsFixed(2);
+      if (valueType == "percentage") {
+        final amount = (currentStartingDebt * parsed) / 100.0;
+        bank.customPayments[monthKey] = amount.toStringAsFixed(2);
+      } else {
+        bank.customPayments[monthKey] = parsed.toStringAsFixed(2);
+      }
       bank.customPayments.remove(_ruleKey(monthKey));
-    } else if (forwardType == "amount") {
+    } else if (valueType == "amount") {
       bank.customPayments[_ruleKey(monthKey)] =
           "amount:${parsed.toStringAsFixed(2)}";
       bank.customPayments.remove(monthKey);
@@ -442,8 +449,8 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
               ),
               if (!isPaid)
                 OutlinedButton.icon(
-                  onPressed: () =>
-                      _editPaymentPlan(bank, row.monthKey, row.payment),
+                  onPressed: () => _editPaymentPlan(
+                      bank, row.monthKey, row.payment, row.startingDebt),
                   icon: const Icon(Icons.edit, size: 16),
                   label: const Text("Düzenle"),
                 ),
@@ -516,25 +523,34 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                 ),
               ),
             if (isCompact)
-              Column(
+              Row(
                 children: [
-                  _TopCard(
-                    title: "Güncel Toplam Borç",
-                    value: _fmtMoney(bank.totalDebt),
-                    tint: const Color(0xFF4F46E5),
+                  Expanded(
+                    child: _TopCard(
+                      title: "Toplam Borç",
+                      value: _fmtMoney(bank.totalDebt),
+                      tint: const Color(0xFF4F46E5),
+                      compact: true,
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  _TopCard(
-                    title: "Faiz Oranı",
-                    value:
-                        "%${bank.interestRate} (${bank.interestType == "Daily" ? "Günlük" : "Aylık"})",
-                    tint: const Color(0xFF64748B),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _TopCard(
+                      title: "Faiz",
+                      value:
+                          "%${bank.interestRate} (${bank.interestType == "Daily" ? "Günlük" : "Aylık"})",
+                      tint: const Color(0xFF64748B),
+                      compact: true,
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  _TopCard(
-                    title: "Planlanan Vade",
-                    value: "${projection.length} Ay",
-                    tint: const Color(0xFFE11D48),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _TopCard(
+                      title: "Vade",
+                      value: "${projection.length} Ay",
+                      tint: const Color(0xFFE11D48),
+                      compact: true,
+                    ),
                   ),
                 ],
               )
@@ -685,7 +701,11 @@ class _BankPlanScreenState extends State<BankPlanScreen> {
                                       onTap: isPaid
                                           ? null
                                           : () => _editPaymentPlan(
-                                              bank, row.monthKey, row.payment),
+                                                bank,
+                                                row.monthKey,
+                                                row.payment,
+                                                row.startingDebt,
+                                              ),
                                       child: Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.end,
@@ -809,18 +829,20 @@ class _TopCard extends StatelessWidget {
   final String title;
   final String value;
   final Color tint;
+  final bool compact;
 
   const _TopCard({
     required this.title,
     required this.value,
     required this.tint,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 124),
-      padding: const EdgeInsets.all(14),
+      constraints: BoxConstraints(minHeight: compact ? 92 : 124),
+      padding: EdgeInsets.all(compact ? 10 : 14),
       decoration: BoxDecoration(
         color: tint.withOpacity(0.07),
         borderRadius: BorderRadius.circular(18),
@@ -834,17 +856,20 @@ class _TopCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: compact ? 11 : 12,
               fontWeight: FontWeight.w800,
               color: Colors.black.withOpacity(0.60),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: compact ? 6 : 8),
           Text(
             value,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              fontSize: compact ? 15 : 18,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ],
       ),

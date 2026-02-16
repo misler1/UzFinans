@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,8 +10,6 @@ import '../models/bank_debt.dart';
 import '../services/income_service.dart';
 import '../services/expense_service.dart';
 import '../services/bank_debt_service.dart';
-
-
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -103,8 +102,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("İptal")),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("İçe Aktar")),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("İptal")),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("İçe Aktar")),
         ],
       ),
     );
@@ -116,12 +119,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _expenseService.clearAll();
     await _bankService.clearAll();
 
-ScaffoldMessenger.of(context).showSnackBar(
-  const SnackBar(content: Text("Tüm veriler silindi")),
-);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Tüm veriler silindi")),
+    );
 
-setState(() {});
-
+    setState(() {});
 
     try {
       final decoded = jsonDecode(ctrl.text.trim());
@@ -183,8 +186,11 @@ setState(() {});
           paymentDueDay: (m["paymentDueDay"] as num).toInt(),
           isActive: (m["isActive"] ?? true) as bool,
           extraPaidTotal: (m["extraPaidTotal"] as num?)?.toDouble() ?? 0,
-          customPayments: (m["customPayments"] as Map?)?.cast<String, String>() ?? {},
-          paidMonths: (m["paidMonths"] as List?)?.map((e) => e.toString()).toList() ?? [],
+          customPayments:
+              (m["customPayments"] as Map?)?.cast<String, String>() ?? {},
+          paidMonths:
+              (m["paidMonths"] as List?)?.map((e) => e.toString()).toList() ??
+                  [],
         ));
       }
 
@@ -211,7 +217,8 @@ setState(() {});
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text("Ayarlar",
-                            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+                            style: TextStyle(
+                                fontSize: 26, fontWeight: FontWeight.w900)),
                         SizedBox(height: 4),
                         Text("Yedekleme / geri yükleme",
                             style: TextStyle(color: Colors.black54)),
@@ -221,7 +228,6 @@ setState(() {});
                 ],
               ),
               const SizedBox(height: 16),
-
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
@@ -233,7 +239,41 @@ setState(() {});
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Yedekleme", style: TextStyle(fontWeight: FontWeight.w900)),
+                    const Text("Hesap",
+                        style: TextStyle(fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 6),
+                    Text(
+                      FirebaseAuth.instance.currentUser?.email ?? "-",
+                      style: TextStyle(color: Colors.black.withOpacity(0.7)),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await FirebaseAuth.instance.signOut();
+                        },
+                        icon: const Icon(Icons.logout),
+                        label: const Text("Çıkış Yap"),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.black.withOpacity(0.06)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Yedekleme",
+                        style: TextStyle(fontWeight: FontWeight.w900)),
                     const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
@@ -255,7 +295,8 @@ setState(() {});
                     const SizedBox(height: 10),
                     Text(
                       "Not: İçe aktarım mevcut kayıtları temizler ve JSON’daki verileri yeniden yazar.",
-                      style: TextStyle(color: Colors.black.withOpacity(0.55), fontSize: 12),
+                      style: TextStyle(
+                          color: Colors.black.withOpacity(0.55), fontSize: 12),
                     ),
                   ],
                 ),

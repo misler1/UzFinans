@@ -397,7 +397,7 @@ class _BanksScreenState extends State<BanksScreen> {
           builder: (context, constraints) {
             final isCompact = MediaQuery.sizeOf(context).shortestSide < 600;
             final crossAxisCount = isCompact ? 1 : 2;
-            final childAspectRatio = isCompact ? 1.0 : 1.55;
+            final childAspectRatio = isCompact ? 1.36 : 1.55;
             return Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 import '../models/expense.dart';
@@ -9,14 +10,23 @@ class ExpenseService {
   static const String collectionName = 'expenses';
 
   Box<Expense> get _box => Hive.box<Expense>(boxName);
-  CollectionReference<Map<String, dynamic>> get _collection =>
-      FirebaseFirestore.instance.collection(collectionName);
+  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+  CollectionReference<Map<String, dynamic>>? get _collection {
+    final uid = _uid;
+    if (uid == null) return null;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection(collectionName);
+  }
 
   List<Expense> getAll() => _box.values.toList();
 
   Future<void> _syncToCloud(Expense item) async {
+    final collection = _collection;
+    if (collection == null) return;
     try {
-      await _collection
+      await collection
           .doc(item.id)
           .set(_toMap(item))
           .timeout(const Duration(seconds: 8));
@@ -26,8 +36,10 @@ class ExpenseService {
   }
 
   Future<void> _deleteFromCloud(String id) async {
+    final collection = _collection;
+    if (collection == null) return;
     try {
-      await _collection.doc(id).delete().timeout(const Duration(seconds: 8));
+      await collection.doc(id).delete().timeout(const Duration(seconds: 8));
     } catch (_) {
       // Local delete has already succeeded; cloud sync is best-effort.
     }
@@ -50,12 +62,17 @@ class ExpenseService {
   }
 
   Future<void> clearAll() async {
-    final box = Hive.box<Expense>(boxName);
-    await box.clear();
-    final snap = await _collection.get();
+    await _box.clear();
+    final collection = _collection;
+    if (collection == null) return;
+    final snap = await collection.get();
     for (final doc in snap.docs) {
       await doc.reference.delete();
     }
+  }
+
+  Future<void> clearAllLocalOnly() async {
+    await _box.clear();
   }
 
   // ✅ YENİ: aynı seriesId'ye sahip bütün kayıtları getir
@@ -81,11 +98,13 @@ class ExpenseService {
   }
 
   Future<void> syncFromCloud() async {
-    final snap = await _collection.get();
+    final collection = _collection;
+    if (collection == null) return;
+    final snap = await collection.get();
 
     if (snap.docs.isEmpty && _box.isNotEmpty) {
       for (final expense in _box.values) {
-        await _collection.doc(expense.id).set(_toMap(expense));
+        await collection.doc(expense.id).set(_toMap(expense));
       }
       return;
     }
@@ -99,7 +118,7 @@ class ExpenseService {
 
     for (final expense in _box.values) {
       if (!cloudIds.contains(expense.id)) {
-        await _collection.doc(expense.id).set(_toMap(expense));
+        await collection.doc(expense.id).set(_toMap(expense));
       }
     }
   }

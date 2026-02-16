@@ -1,13 +1,21 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 import '../models/bank_debt.dart';
 
 class BankDebtService {
   final Box<BankDebt> _box = Hive.box<BankDebt>('bank_debts');
-  CollectionReference<Map<String, dynamic>> get _collection =>
-      FirebaseFirestore.instance.collection('bank_debts');
+  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+  CollectionReference<Map<String, dynamic>>? get _collection {
+    final uid = _uid;
+    if (uid == null) return null;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('bank_debts');
+  }
 
   List<BankDebt> getAll() => _box.values.toList();
 
@@ -15,8 +23,10 @@ class BankDebtService {
 
   Future<void> add(BankDebt d) async {
     await _box.put(d.id, d);
+    final collection = _collection;
+    if (collection == null) return;
     unawaited(
-      _collection
+      collection
           .doc(d.id)
           .set(_toMap(d))
           .timeout(const Duration(seconds: 8))
@@ -26,8 +36,10 @@ class BankDebtService {
 
   Future<void> update(BankDebt d) async {
     await _box.put(d.id, d);
+    final collection = _collection;
+    if (collection == null) return;
     unawaited(
-      _collection
+      collection
           .doc(d.id)
           .set(_toMap(d))
           .timeout(const Duration(seconds: 8))
@@ -37,8 +49,10 @@ class BankDebtService {
 
   Future<void> delete(BankDebt d) async {
     await _box.delete(d.id);
+    final collection = _collection;
+    if (collection == null) return;
     unawaited(
-      _collection
+      collection
           .doc(d.id)
           .delete()
           .timeout(const Duration(seconds: 8))
@@ -73,18 +87,26 @@ class BankDebtService {
   // ✅ DOĞRU YER BURASI
   Future<void> clearAll() async {
     await _box.clear();
-    final snap = await _collection.get();
+    final collection = _collection;
+    if (collection == null) return;
+    final snap = await collection.get();
     for (final doc in snap.docs) {
       await doc.reference.delete();
     }
   }
 
+  Future<void> clearAllLocalOnly() async {
+    await _box.clear();
+  }
+
   Future<void> syncFromCloud() async {
-    final snap = await _collection.get();
+    final collection = _collection;
+    if (collection == null) return;
+    final snap = await collection.get();
 
     if (snap.docs.isEmpty && _box.isNotEmpty) {
       for (final item in _box.values) {
-        await _collection.doc(item.id).set(_toMap(item));
+        await collection.doc(item.id).set(_toMap(item));
       }
       return;
     }
@@ -98,7 +120,7 @@ class BankDebtService {
 
     for (final bank in _box.values) {
       if (!cloudIds.contains(bank.id)) {
-        await _collection.doc(bank.id).set(_toMap(bank));
+        await collection.doc(bank.id).set(_toMap(bank));
       }
     }
   }
