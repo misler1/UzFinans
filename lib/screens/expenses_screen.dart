@@ -748,36 +748,76 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   Future<void> _confirmDelete(Expense expense) async {
     if (_deletingExpenseIds.contains(expense.id)) return;
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Silinsin mi?"),
-        content: Text("${expense.name} kaydı silinecek."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("İptal"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Sil"),
-          ),
-        ],
-      ),
-    );
+    final seriesId = expense.seriesId ?? "";
+    final hasSeries = seriesId.isNotEmpty;
+    List<Expense> targets = [expense];
 
-    if (ok == true) {
-      setState(() => _deletingExpenseIds.add(expense.id));
-      try {
-        await _service.delete(expense);
-      } catch (_) {
-        _toast("Silme sırasında hata oluştu.");
-      } finally {
-        if (mounted) {
-          setState(() {
-            _deletingExpenseIds.remove(expense.id);
-          });
-        }
+    if (hasSeries) {
+      final seriesItems = _service.getBySeriesId(seriesId);
+      final scope = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Tekrarlı Gider"),
+          content: const Text(
+              "Sadece bu kaydı mı, yoksa tüm tekrarları mı silmek istiyorsun?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("İptal"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, "single"),
+              child: const Text("Sadece Bu Kayıt"),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, "all"),
+              child: const Text("Tüm Tekrarlar"),
+            ),
+          ],
+        ),
+      );
+
+      if (scope == null) return;
+      targets = scope == "all" ? seriesItems : [expense];
+    } else {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Silinsin mi?"),
+          content: Text("${expense.name} kaydı silinecek."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("İptal"),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Sil"),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+
+    setState(() {
+      for (final item in targets) {
+        _deletingExpenseIds.add(item.id);
+      }
+    });
+    try {
+      for (final item in targets) {
+        await _service.delete(item);
+      }
+    } catch (_) {
+      _toast("Silme sırasında hata oluştu.");
+    } finally {
+      if (mounted) {
+        setState(() {
+          for (final item in targets) {
+            _deletingExpenseIds.remove(item.id);
+          }
+        });
       }
     }
   }
@@ -1007,6 +1047,72 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
+  Widget _mobileSummarySection() {
+    return Column(
+      children: [
+        _statCard(
+          title: "Planlanan",
+          value: _fmtMoney(_totalPlanned),
+          subtitle: "Seçili dönem",
+          icon: Icons.trending_down,
+          tint: const Color(0xFFE11D48),
+        ),
+        const SizedBox(height: 10),
+        _statCard(
+          title: "Ödenen",
+          value: _fmtMoney(_paidTotal),
+          subtitle: "İşaretli ödemeler",
+          icon: Icons.credit_card,
+          tint: const Color(0xFF0F766E),
+        ),
+        const SizedBox(height: 10),
+        _statCard(
+          title: "Durum",
+          value: "%$_progressPercent",
+          subtitle: "Tutar bazlı ilerleme",
+          icon: Icons.calendar_month,
+          tint: const Color(0xFF4F46E5),
+        ),
+      ],
+    );
+  }
+
+  Widget _desktopSummarySection() {
+    return Row(
+      children: [
+        Expanded(
+          child: _statCard(
+            title: "Planlanan",
+            value: _fmtMoney(_totalPlanned),
+            subtitle: "Seçili dönem",
+            icon: Icons.trending_down,
+            tint: const Color(0xFFE11D48),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _statCard(
+            title: "Ödenen",
+            value: _fmtMoney(_paidTotal),
+            subtitle: "İşaretli ödemeler",
+            icon: Icons.credit_card,
+            tint: const Color(0xFF0F766E),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _statCard(
+            title: "Durum",
+            value: "%$_progressPercent",
+            subtitle: "Tutar bazlı ilerleme",
+            icon: Icons.calendar_month,
+            tint: const Color(0xFF4F46E5),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredExpenses;
@@ -1017,94 +1123,27 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isCompact = MediaQuery.sizeOf(context).shortestSide < 600;
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  if (isCompact)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            if (isCompact) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Giderler",
+                      style:
+                          TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Aylık gider özeti",
+                      style: TextStyle(color: Colors.black.withOpacity(0.55)),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
                       children: [
-                        const Text(
-                          "Giderler",
-                          style: TextStyle(
-                              fontSize: 26, fontWeight: FontWeight.w900),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Aylık gider özeti",
-                          style:
-                              TextStyle(color: Colors.black.withOpacity(0.55)),
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            _smallFilter<int>(
-                              label: "Ay",
-                              value: selectedMonth,
-                              items: months
-                                  .map((m) => DropdownMenuItem<int>(
-                                        value: m["value"] as int,
-                                        child: Text(m["label"] as String),
-                                      ))
-                                  .toList(),
-                              onChanged: (v) => setState(() {
-                                selectedMonth = v ?? selectedMonth;
-                                _autoMonthSelected = false;
-                              }),
-                            ),
-                            _smallFilter<int>(
-                              label: "Yıl",
-                              value: selectedYear,
-                              items: _years()
-                                  .map((y) => DropdownMenuItem<int>(
-                                        value: y,
-                                        child: Text("$y"),
-                                      ))
-                                  .toList(),
-                              onChanged: (v) => setState(() {
-                                selectedYear = v ?? selectedYear;
-                                _autoMonthSelected = false;
-                              }),
-                            ),
-                            SizedBox(
-                              height: 44,
-                              child: ElevatedButton.icon(
-                                onPressed: () => _openAddEditDialog(),
-                                icon: const Icon(Icons.add),
-                                label: const Text("Gider Ekle"),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    )
-                  else
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Giderler",
-                                style: TextStyle(
-                                    fontSize: 26, fontWeight: FontWeight.w900),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Aylık gider özeti",
-                                style: TextStyle(
-                                  color: Colors.black.withOpacity(0.55),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
                         _smallFilter<int>(
                           label: "Ay",
                           value: selectedMonth,
@@ -1119,20 +1158,20 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             _autoMonthSelected = false;
                           }),
                         ),
-                        const SizedBox(width: 10),
                         _smallFilter<int>(
                           label: "Yıl",
                           value: selectedYear,
                           items: _years()
                               .map((y) => DropdownMenuItem<int>(
-                                  value: y, child: Text("$y")))
+                                    value: y,
+                                    child: Text("$y"),
+                                  ))
                               .toList(),
                           onChanged: (v) => setState(() {
                             selectedYear = v ?? selectedYear;
                             _autoMonthSelected = false;
                           }),
                         ),
-                        const SizedBox(width: 10),
                         SizedBox(
                           height: 44,
                           child: ElevatedButton.icon(
@@ -1143,69 +1182,122 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         ),
                       ],
                     ),
-                  const SizedBox(height: 16),
-                  if (isCompact)
-                    Column(
-                      children: [
-                        _statCard(
-                          title: "Planlanan",
-                          value: _fmtMoney(_totalPlanned),
-                          subtitle: "Seçili dönem",
-                          icon: Icons.trending_down,
-                          tint: const Color(0xFFE11D48),
-                        ),
-                        const SizedBox(height: 10),
-                        _statCard(
-                          title: "Ödenen",
-                          value: _fmtMoney(_paidTotal),
-                          subtitle: "İşaretli ödemeler",
-                          icon: Icons.credit_card,
-                          tint: const Color(0xFF0F766E),
-                        ),
-                        const SizedBox(height: 10),
-                        _statCard(
-                          title: "Durum",
-                          value: "%$_progressPercent",
-                          subtitle: "Tutar bazlı ilerleme",
-                          icon: Icons.calendar_month,
-                          tint: const Color(0xFF4F46E5),
-                        ),
-                      ],
-                    )
-                  else
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _statCard(
-                            title: "Planlanan",
-                            value: _fmtMoney(_totalPlanned),
-                            subtitle: "Seçili dönem",
-                            icon: Icons.trending_down,
-                            tint: const Color(0xFFE11D48),
+                    const SizedBox(height: 16),
+                    _mobileSummarySection(),
+                    const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border:
+                            Border.all(color: Colors.black.withOpacity(0.06)),
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                    color: Colors.black.withOpacity(0.08)),
+                              ),
+                            ),
+                            child: Text(
+                              "Gider Kayıtları – ${_monthLabel(selectedMonth)} $selectedYear",
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w800),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _statCard(
-                            title: "Ödenen",
-                            value: _fmtMoney(_paidTotal),
-                            subtitle: "İşaretli ödemeler",
-                            icon: Icons.credit_card,
-                            tint: const Color(0xFF0F766E),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _statCard(
-                            title: "Durum",
-                            value: "%$_progressPercent",
-                            subtitle: "Tutar bazlı ilerleme",
-                            icon: Icons.calendar_month,
-                            tint: const Color(0xFF4F46E5),
-                          ),
-                        ),
-                      ],
+                          if (filtered.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Center(
+                                child: Text("Bu dönemde gider yok"),
+                              ),
+                            )
+                          else
+                            ListView.builder(
+                              itemCount: filtered.length,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemBuilder: (_, i) =>
+                                  _mobileRowItem(filtered[i]),
+                            ),
+                        ],
+                      ),
                     ),
+                  ],
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Giderler",
+                              style: TextStyle(
+                                  fontSize: 26, fontWeight: FontWeight.w900),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Aylık gider özeti",
+                              style: TextStyle(
+                                color: Colors.black.withOpacity(0.55),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      _smallFilter<int>(
+                        label: "Ay",
+                        value: selectedMonth,
+                        items: months
+                            .map((m) => DropdownMenuItem<int>(
+                                  value: m["value"] as int,
+                                  child: Text(m["label"] as String),
+                                ))
+                            .toList(),
+                        onChanged: (v) => setState(() {
+                          selectedMonth = v ?? selectedMonth;
+                          _autoMonthSelected = false;
+                        }),
+                      ),
+                      const SizedBox(width: 10),
+                      _smallFilter<int>(
+                        label: "Yıl",
+                        value: selectedYear,
+                        items: _years()
+                            .map((y) => DropdownMenuItem<int>(
+                                value: y, child: Text("$y")))
+                            .toList(),
+                        onChanged: (v) => setState(() {
+                          selectedYear = v ?? selectedYear;
+                          _autoMonthSelected = false;
+                        }),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        height: 44,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _openAddEditDialog(),
+                          icon: const Icon(Icons.add),
+                          label: const Text("Gider Ekle"),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _desktopSummarySection(),
                   const SizedBox(height: 16),
                   Expanded(
                     child: Container(

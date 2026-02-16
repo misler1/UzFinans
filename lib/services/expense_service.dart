@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 import '../models/expense.dart';
@@ -12,20 +14,39 @@ class ExpenseService {
 
   List<Expense> getAll() => _box.values.toList();
 
+  Future<void> _syncToCloud(Expense item) async {
+    try {
+      await _collection
+          .doc(item.id)
+          .set(_toMap(item))
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Local write has already succeeded; cloud sync is best-effort.
+    }
+  }
+
+  Future<void> _deleteFromCloud(String id) async {
+    try {
+      await _collection.doc(id).delete().timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Local delete has already succeeded; cloud sync is best-effort.
+    }
+  }
+
   // ✅ id ile yaz (sende zaten buydu, koruduk)
   Future<void> add(Expense item) async {
     await _box.put(item.id, item);
-    await _collection.doc(item.id).set(_toMap(item));
+    unawaited(_syncToCloud(item));
   }
 
   Future<void> update(Expense item) async {
     await _box.put(item.id, item);
-    await _collection.doc(item.id).set(_toMap(item));
+    unawaited(_syncToCloud(item));
   }
 
   Future<void> delete(Expense item) async {
     await _box.delete(item.id);
-    await _collection.doc(item.id).delete();
+    unawaited(_deleteFromCloud(item.id));
   }
 
   Future<void> clearAll() async {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 import '../models/income.dart';
@@ -14,19 +16,38 @@ class IncomeService {
     return _box.values.toList();
   }
 
+  Future<void> _syncToCloud(Income income) async {
+    try {
+      await _collection
+          .doc(income.id)
+          .set(_toMap(income))
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Local write has already succeeded; cloud sync is best-effort.
+    }
+  }
+
+  Future<void> _deleteFromCloud(String id) async {
+    try {
+      await _collection.doc(id).delete().timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Local delete has already succeeded; cloud sync is best-effort.
+    }
+  }
+
   Future<void> add(Income income) async {
     await _box.put(income.id, income);
-    await _collection.doc(income.id).set(_toMap(income));
+    unawaited(_syncToCloud(income));
   }
 
   Future<void> update(Income income) async {
     await _box.put(income.id, income);
-    await _collection.doc(income.id).set(_toMap(income));
+    unawaited(_syncToCloud(income));
   }
 
   Future<void> delete(Income income) async {
     await _box.delete(income.id);
-    await _collection.doc(income.id).delete();
+    unawaited(_deleteFromCloud(income.id));
   }
 
   Future<void> clearAll() async {
