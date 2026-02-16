@@ -372,9 +372,9 @@ class _BanksScreenState extends State<BanksScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isCompact = constraints.maxWidth < 900;
+            final isCompact = MediaQuery.sizeOf(context).shortestSide < 600;
             final crossAxisCount = isCompact ? 1 : 2;
-            final childAspectRatio = isCompact ? 1.12 : 2.0;
+            final childAspectRatio = isCompact ? 1.0 : 1.55;
             return Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

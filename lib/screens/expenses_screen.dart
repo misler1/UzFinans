@@ -976,7 +976,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isCompact = constraints.maxWidth < 900;
+            final isCompact = MediaQuery.sizeOf(context).shortestSide < 600;
             return Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
